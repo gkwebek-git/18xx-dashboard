@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>18xx Dashboard</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --panel-b: #262d38; --text: #e8edf4; --muted: #8b97a8;
+    --c-cash: #3fb950; --c-liq: #58a6ff; --c-val: #d29922;
+  }
+  body.light { --bg: #f1f3f6; --panel: #ffffff; --panel-b: #dde2ea; --text: #17202c; --muted: #5f6b7c; }
+  body.transparent { background: transparent !important; }
+  body.transparent .panel, body.transparent .card { background: rgba(13, 17, 23, .72); }
+  body.light.transparent .panel, body.light.transparent .card { background: rgba(255, 255, 255, .78); }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; overflow: hidden; }
+  .wrap { height: 100vh; display: grid; grid-template-rows: auto auto 1fr; gap: 1.6vh; padding: 2vh 1.6vw; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 1.5vw; }
+  header h1 { margin: 0; font-size: clamp(18px, 3vh, 34px); font-weight: 700; letter-spacing: .2px; }
+  header h1 small { font-weight: 500; color: var(--muted); margin-left: .6em; font-size: .7em; }
+  .chips { display: flex; gap: .6vw; align-items: center; }
+  .chip { border: 1px solid var(--panel-b); background: var(--panel); border-radius: 999px; padding: .5vh 1vw; font-size: clamp(11px, 1.8vh, 18px); color: var(--muted); white-space: nowrap; }
+  .chip b { color: var(--text); font-weight: 600; }
+  .dot { display: inline-block; width: .6em; height: .6em; border-radius: 50%; background: #3fb950; margin-right: .5em; animation: pulse 2s infinite; }
+  .dot.off { background: #f85149; animation: none; }
+  .dot.done { background: var(--muted); animation: none; }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  .cards { display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); gap: 1vw; }
+  .card { background: var(--panel); border: 1px solid var(--panel-b); border-left: .5vw solid var(--pc); border-radius: 14px; padding: 1.4vh 1.1vw; min-width: 0; }
+  .card .name { font-size: clamp(14px, 2.6vh, 28px); font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: .5em; }
+  .card .rank { color: var(--muted); font-weight: 600; font-size: .7em; }
+  .card .big { font-size: clamp(22px, 5.2vh, 58px); font-weight: 800; line-height: 1.1; color: var(--pc); font-variant-numeric: tabular-nums; }
+  .card .lbl { font-size: clamp(9px, 1.35vh, 14px); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6vw; margin-top: .8vh; }
+  .mini div b { display: block; font-size: clamp(12px, 2.1vh, 22px); font-variant-numeric: tabular-nums; }
+  .bar { height: .9vh; min-height: 5px; background: var(--panel-b); border-radius: 99px; margin-top: .9vh; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--pc); width: 0; transition: width .8s ease; border-radius: 99px; }
+  .tags { margin-top: .6vh; min-height: 1.2em; display: flex; gap: .3em; flex-wrap: wrap; }
+  .tags span { font-size: clamp(9px, 1.4vh, 14px); padding: .1em .5em; border-radius: 6px; border: 1px solid var(--panel-b); color: var(--muted); }
+
+  .charts { display: grid; grid-template-columns: 1fr 1.35fr 1fr; gap: 1vw; min-height: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--panel-b); border-radius: 14px; padding: 1.2vh 1vw; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .panel h2 { margin: 0 0 .8vh; font-size: clamp(11px, 1.8vh, 18px); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .canvas { position: relative; flex: 1; min-height: 0; }
+  #msg { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; font-size: 3vh; color: var(--muted); text-align: center; padding: 4vw; }
+  @media (max-width: 900px) { .cards { grid-template-columns: repeat(2, 1fr); } .charts { grid-template-columns: 1fr; overflow: auto; } body { overflow: auto; } .wrap { height: auto; } .canvas { height: 38vh; flex: none; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <header>
+    <h1 id="title">18xx<small id="sub"></small></h1>
+    <div class="chips">
+      <span class="chip" id="round"></span>
+      <span class="chip" id="live"><i class="dot"></i><b>–</b></span>
+    </div>
+  </header>
+  <section class="cards" id="cards"></section>
+  <section class="charts">
+    <div class="panel"><h2>Készpénz · Likviditás · Érték</h2><div class="canvas"><canvas id="c1"></canvas></div></div>
+    <div class="panel"><h2>Vagyon alakulása a körök során</h2><div class="canvas"><canvas id="c2"></canvas></div></div>
+    <div class="panel"><h2>Részvények és certek</h2><div class="canvas"><canvas id="c3"></canvas></div></div>
+  </section>
+</div>
+<div id="msg"></div>
+<script src="chart.umd.js"></script>
+<script>
+(() => {
+  // ---- beállítások (URL-ből): ?game=272021&theme=light&bg=transparent&refresh=30&src=... ----
+  const DEFAULT_GAME = "272021";
+  const DATA_REPO = "gkwebek-git/18xx-dashboard"; // innen jönnek az adatok (data ág)
+  const q = new URLSearchParams(location.search);
+  const game = (q.get("game") || DEFAULT_GAME).replace(/\D/g, "");
+  const refresh = Math.max(10, Number(q.get("refresh")) || 30) * 1000;
+  if (q.get("theme") === "light") document.body.classList.add("light");
+  if (q.get("bg") === "transparent") document.body.classList.add("transparent");
+  const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  const src = q.get("src") || (isLocal ? `data/${game}.json` : `https://raw.githubusercontent.com/${DATA_REPO}/data/${game}.json`);
+
+  const PALETTE = ["#ff7b72", "#58a6ff", "#3fb950", "#d29922", "#bc8cff", "#39c5cf"];
+  const css = (v) => getComputedStyle(document.body).getPropertyValue(v).trim();
+  const $ = (id) => document.getElementById(id);
+  const money = (n) => "$" + Math.round(n).toLocaleString("hu-HU").replace(/\u00a0/g, " ");
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  Chart.defaults.font.family = '"Segoe UI", system-ui, sans-serif';
+  Chart.defaults.font.size = Math.max(11, Math.round(innerHeight / 60));
+  Chart.defaults.animation.duration = 800;
+  Chart.defaults.maintainAspectRatio = false;
+
+  let charts = {};
+  let last = "";
+
+  function ensureCharts(d) {
+    const text = css("--text"), muted = css("--muted"), grid = "rgba(139,151,168,.18)";
+    const scales = (extra = {}) => ({
+      x: { ticks: { color: text }, grid: { display: false }, ...(extra.x || {}) },
+      y: { ticks: { color: muted }, grid: { color: grid }, beginAtZero: true, ...(extra.y || {}) },
+    });
+    const legend = { labels: { color: text, boxWidth: 12, usePointStyle: true } };
+    if (charts.c1) return;
+    charts.c1 = new Chart($("c1"), {
+      type: "bar",
+      data: { labels: [], datasets: [
+        { label: "Készpénz", data: [], backgroundColor: css("--c-cash"), borderRadius: 6 },
+        { label: "Likviditás", data: [], backgroundColor: css("--c-liq"), borderRadius: 6 },
+        { label: "Érték", data: [], backgroundColor: css("--c-val"), borderRadius: 6 },
+      ] },
+      options: { plugins: { legend, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${money(c.parsed.y)}` } } }, scales: scales({ y: { ticks: { color: muted, callback: (v) => money(v) } } }) },
+    });
+    charts.c2 = new Chart($("c2"), {
+      type: "line",
+      data: { labels: [], datasets: [] },
+      options: { interaction: { mode: "index", intersect: false }, elements: { point: { radius: 2.5, hoverRadius: 5 }, line: { tension: .3, borderWidth: 3 } },
+        plugins: { legend, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${money(c.parsed.y)}` } } },
+        scales: { x: { ticks: { color: muted, maxRotation: 0, autoSkip: true }, grid: { display: false } }, y: { ticks: { color: muted, callback: (v) => money(v) }, grid: { color: grid }, beginAtZero: true } } },
+    });
+    charts.c3 = new Chart($("c3"), {
+      type: "bar",
+      data: { labels: [], datasets: [
+        { label: "Részvény", data: [], backgroundColor: "#bc8cff", borderRadius: 6 },
+        { label: "Cert", data: [], backgroundColor: "#39c5cf", borderRadius: 6 },
+      ] },
+      options: { plugins: { legend }, scales: scales({ y: { ticks: { color: muted, precision: 0 } } }) },
+    });
+  }
+
+  function render(d) {
+    const ps = d.players;
+    document.title = `${d.title || "18xx"} dashboard`;
+    $("title").innerHTML = `${esc(d.title || "18xx")}<small>${esc((d.description || "").trim())}</small>`;
+    $("round").innerHTML = `<b>${esc(d.round || "")}</b> · ${d.turn ?? "?"}. forduló`;
+    const status = d.status === "finished" ? "done" : "";
+    $("live").innerHTML = `<i class="dot ${status}"></i><b>${d.status === "finished" ? "Befejezett játék" : "Élő játék"}</b>${d.updatedAt ? " · utolsó lépés: " + new Date(d.updatedAt * 1000).toLocaleString("hu-HU", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}`;
+
+    // kártyák
+    const order = ps.map((p, i) => ({ ...p, i })).sort((a, b) => b.value - a.value);
+    const rank = new Map(order.map((p, r) => [p.i, r + 1]));
+    const cards = $("cards");
+    cards.style.setProperty("--n", ps.length);
+    cards.innerHTML = ps.map((p, i) => {
+      const pc = PALETTE[i % PALETTE.length];
+      const lim = d.certLimit || Math.max(...ps.map((x) => x.certs), 1);
+      return `<div class="card" style="--pc:${pc}">
+        <div class="name"><span>${esc(p.name)}</span><span class="rank">#${rank.get(i)}</span></div>
+        <div class="lbl">Érték</div><div class="big">${money(p.value)}</div>
+        <div class="mini">
+          <div><span class="lbl">Készpénz</span><b>${money(p.cash)}</b></div>
+          <div><span class="lbl">Likviditás</span><b>${money(p.liquidity)}</b></div>
+          <div><span class="lbl">Részvény</span><b>${p.shares}</b></div>
+        </div>
+        <div class="bar"><i style="width:${Math.min(100, (p.certs / lim) * 100)}%"></i></div>
+        <div class="lbl" style="margin-top:.4vh">Certek ${p.certs}/${lim}</div>
+        <div class="tags">${p.companies.map((c) => `<span>${esc(c)}</span>`).join("")}</div>
+      </div>`;
+    }).join("");
+
+    ensureCharts(d);
+    const names = ps.map((p) => p.name);
+    charts.c1.data.labels = names;
+    charts.c1.data.datasets[0].data = ps.map((p) => p.cash);
+    charts.c1.data.datasets[1].data = ps.map((p) => p.liquidity);
+    charts.c1.data.datasets[2].data = ps.map((p) => p.value);
+    charts.c1.update();
+
+    charts.c2.data.labels = d.history.map((h) => h.label);
+    charts.c2.data.datasets = ps.map((p, i) => ({
+      label: p.name, data: d.history.map((h) => h.values[i] ?? null),
+      borderColor: PALETTE[i % PALETTE.length], backgroundColor: PALETTE[i % PALETTE.length], spanGaps: true,
+    }));
+    charts.c2.update();
+
+    charts.c3.data.labels = names;
+    charts.c3.data.datasets[0].data = ps.map((p) => p.shares);
+    charts.c3.data.datasets[1].data = ps.map((p) => p.certs);
+    charts.c3.update();
+  }
+
+  async function tick() {
+    try {
+      const r = await fetch(`${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" });
+      if (!r.ok) throw new Error(r.status);
+      const text = await r.text();
+      $("msg").style.display = "none";
+      $("wrap").style.visibility = "visible";
+      if (text !== last) { last = text; render(JSON.parse(text)); }
+    } catch (e) {
+      if (!last) {
+        $("wrap").style.visibility = "hidden";
+        $("msg").style.display = "flex";
+        $("msg").textContent = `Még nincs adat a(z) ${game} játékhoz. (A feed percenként frissül, nézz vissza kicsit később.)`;
+      } else {
+        $("live").innerHTML = `<i class="dot off"></i><b>Nincs kapcsolat</b>`;
+      }
+    }
+  }
+  tick();
+  setInterval(tick, refresh);
+})();
+</script>
+</body>
+</html>

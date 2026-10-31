@@ -1,0 +1,2 @@
+# Játék-azonosítók, soronként egy (az 18xx.games/game/<szám> címbõl).
+272021
