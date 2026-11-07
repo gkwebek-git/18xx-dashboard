@@ -9,7 +9,7 @@ async function openTab(page, name, ready) {
     if (a) a.click();
   }, name);
   if (ready) await page.waitForSelector(ready, { timeout: 15000 }).catch(() => {});
-  await sleep(600);
+  await sleep(Number(process.env.TAB_SLEEP) || 600);
 }
 
 export async function extractView(page) {

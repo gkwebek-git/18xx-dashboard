@@ -6,7 +6,7 @@
 import puppeteer from "puppeteer-core";
 import fs from "node:fs";
 import path from "node:path";
-import { extractView } from "./extract-view.mjs";
+import { collect } from "./collect.mjs";
 
 const args = process.argv.slice(2);
 const ids = args.filter((a) => /^\d+$/.test(a));
@@ -69,76 +69,7 @@ async function scrapeOne(getBrowser, id) {
     await page.goto(`https://18xx.games/game/${id}#spreadsheet`, { waitUntil: "domcontentloaded", timeout: 90000 });
     await page.waitForSelector("#player_details", { timeout: 90000 });
     await new Promise((r) => setTimeout(r, 1500));
-    const sheet = await page.evaluate(() => {
-      const num = (s) => {
-        const t = String(s).replace(/[^0-9.\-]/g, "");
-        return t === "" || t === "-" ? null : Number(t);
-      };
-      const det = document.getElementById("player_details");
-      const table = det.closest("table");
-      const names = [...table.querySelectorAll("th.name")].map((e) => e.textContent.trim());
-      const rows = {};
-      for (const tr of det.rows) {
-        const label = tr.querySelector("th").textContent.trim();
-        rows[label] = [...tr.querySelectorAll("td")].map((td) => td.innerText.trim());
-      }
-      const hist = [];
-      const hb = document.getElementById("player_or_history");
-      if (hb)
-        for (const tr of hb.rows) {
-          const label = tr.querySelector("th").textContent.trim();
-          hist.push({ label, values: [...tr.querySelectorAll("td")].map((td) => num(td.innerText)) });
-        }
-      return { names, rows, hist, num: undefined };
-    });
-
-    const pick = (prefix) => {
-      const key = Object.keys(sheet.rows).find((k) => k.toLowerCase().startsWith(prefix));
-      return key ? { key, cells: sheet.rows[key] } : { key: "", cells: [] };
-    };
-    const n = (s) => {
-      const t = String(s ?? "").replace(/[^0-9.\-]/g, "");
-      return t === "" || t === "-" ? 0 : Number(t);
-    };
-    const certs = pick("certs");
-    const certLimit = Number((/\/(\d+)/.exec(certs.key) ?? [])[1] ?? 0) || null;
-    const players = sheet.names.map((name, i) => ({
-      name,
-      cash: n(pick("cash").cells[i]),
-      value: n(pick("value").cells[i]),
-      liquidity: n(pick("liquidity").cells[i]),
-      shares: n(pick("shares").cells[i]),
-      certs: n(certs.cells[i]),
-      companies: (pick("companies").cells[i] ?? "").split(/[\s,]+/).filter(Boolean),
-    }));
-    if (!players.length) throw new Error("Üres táblázat");
-
-    // történet: csak a kör végi sorok (OR / SR), időrendben
-    const history = sheet.hist
-      .filter((h) => /^(OR|SR|ISR)\b/.test(h.label))
-      .reverse()
-      .map((h) => ({ label: h.label, values: h.values }));
-
-    const out = {
-      id: Number(id),
-      title: g.title,
-      description: g.description,
-      status: g.status,
-      round: g.round,
-      turn: g.turn,
-      updatedAt: g.updated_at,
-      actionCount,
-      acting: (g.acting ?? []).map((pid) => (g.players ?? []).find((p) => p.id === pid)?.name).filter(Boolean),
-      certLimit,
-      players,
-      history,
-    };
-    let view = null;
-    try {
-      view = await extractView(page);
-    } catch (e) {
-      console.warn(`[${id}] a TV-nézet adatai nem olvashatók ki: ${e.message}`);
-    }
+    const { out, view, players } = await collect(page, id, g);
     fs.writeFileSync(path.join(outDir, `${id}.json`), JSON.stringify(out));
     if (view) fs.writeFileSync(path.join(outDir, `${id}.view.json`), JSON.stringify(view));
     if (postUrl) await post({ id: String(id), data: out, view });

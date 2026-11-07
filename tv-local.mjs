@@ -1,6 +1,6 @@
 // Helyi TV nézet: saját kis szerver + saját kiolvasó, semmi sem megy külső szolgáltatáson át.
 //   node tv-local.mjs 272021
-//   node tv-local.mjs https://18xx.games/game/272021 --every=60
+//   node tv-local.mjs https://18xx.games/game/272021
 // Megnyitja a böngészőben: http://localhost:3009/tv.html?game=ID&local=1
 import http from "node:http";
 import fs from "node:fs";
@@ -12,7 +12,6 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, "public");
 const args = process.argv.slice(2);
-const every = Math.max(30, Number((args.find((a) => a.startsWith("--every=")) || "--every=60").split("=")[1]) || 60);
 const PORT = Number(process.env.PORT || 3009);
 
 let raw = args.find((a) => !a.startsWith("--"));
@@ -38,9 +37,9 @@ const server = http.createServer((req, res) => {
 server.on("error", (e) => { if (e.code !== "EADDRINUSE") throw e; console.log(`A ${PORT}-es port már foglalt, a már futó helyi szervert használom.`); });
 server.listen(PORT, () => console.log(`Szerver: http://localhost:${PORT}`));
 
-// ---- kiolvasó: saját gépen, ${every} mp-enként, csak akkor olvas, ha van új lépés ----
+// ---- élő figyelő: egy nyitva tartott láthatatlan lap, ami az 18xx.games saját élő csatornáját hallgatja ----
 const dataDir = path.join(root, "data");
-const scraper = spawn(process.execPath, [path.join(here, "scrape.mjs"), id, `--out=${dataDir}`, `--watch=${every}`], { cwd: here, stdio: "inherit" });
+const scraper = spawn(process.execPath, [path.join(here, "live-local.mjs"), id, `--out=${dataDir}`], { cwd: here, stdio: "inherit" });
 const quit = () => { try { scraper.kill(); } catch {} process.exit(0); };
 process.on("SIGINT", quit); process.on("SIGTERM", quit);
 scraper.on("exit", (c) => { console.log(`A kiolvasó leállt (${c}).`); process.exit(c ?? 0); });
