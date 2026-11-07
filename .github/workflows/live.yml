@@ -1,0 +1,36 @@
+name: Élő figyelő
+
+# Ezt a Cloudflare-en futó figyelő (worker/) indítja, amikor valaki nézi egy játék TV-oldalát.
+# Egyetlen böngészőlap marad nyitva a játékon (mint egy átlagos néző), és változáskor azonnal elküldi az adatokat.
+# Magától leáll, ha nincs néző, ha a játék véget ért, vagy ha letelt az időkorlát.
+on:
+  workflow_dispatch:
+    inputs:
+      id:
+        description: "Játék-azonosító"
+        required: true
+
+concurrency:
+  group: live-${{ inputs.id }}
+  cancel-in-progress: false
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Élő figyelés
+        env:
+          GAME_ID: ${{ inputs.id }}
+          HUB_URL: ${{ vars.HUB_URL }}
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          if ! [[ "$GAME_ID" =~ ^[0-9]+$ ]]; then echo "Hibás azonosító"; exit 1; fi
+          node live-local.mjs "$GAME_ID" --post="$HUB_URL/api/ingest" --max-minutes=335

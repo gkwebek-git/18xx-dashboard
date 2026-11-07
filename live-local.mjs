@@ -2,7 +2,8 @@
 // átlagos nézőnél. Az oldal maga kapja a lépéseket az 18xx.games saját élő csatornáján, így nincs
 // folyamatos lekérdezés – csak akkor olvasunk ki, ha tényleg változott valami.
 //
-//   node live-local.mjs 272021 [--out=public/data]
+//   node live-local.mjs 272021 [--out=public/data]                     (helyi: fájlokba ír)
+//   node live-local.mjs 272021 --post=https://.../api/ingest          (GitHub Actions: a hubnak küldi; INGEST_TOKEN kell)
 import puppeteer from "puppeteer-core";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,7 +13,11 @@ process.env.TAB_SLEEP ??= "350";
 const args = process.argv.slice(2);
 const id = args.find((a) => /^\d+$/.test(a));
 const outDir = (args.find((a) => a.startsWith("--out=")) || "--out=public/data").split("=")[1];
-if (!id) { console.error("Használat: node live-local.mjs <játék-azonosító> [--out=mappa]"); process.exit(1); }
+const postUrl = (args.find((a) => a.startsWith("--post=")) || "--post=").slice(7);
+const token = process.env.INGEST_TOKEN ?? "";
+const maxMs = Number((args.find((a) => a.startsWith("--max-minutes=")) || "--max-minutes=0").split("=")[1]) * 60_000;
+const startedAt = Date.now();
+if (!id) { console.error("Használat: node live-local.mjs <játék-azonosító> [--out=mappa | --post=URL]"); process.exit(1); }
 
 const candidates = [process.env.CHROME_PATH, "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].filter(Boolean);
 const executablePath = candidates.find((p) => fs.existsSync(p));
@@ -28,12 +33,19 @@ async function api() {
   if (!r.ok) throw new Error(`API hiba: ${r.status}`);
   return r.json();
 }
-function writeAtomic(name, data) {
+async function post(body) {
+  const r = await fetch(postUrl, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+  if (r.status === 404 || r.status === 401) { log(`a hub elutasította (${r.status}), leállás`); await quit(); }
+  if (!r.ok) throw new Error(`Küldési hiba: ${r.status}`);
+  const j = await r.json().catch(() => ({}));
+  if (j.stop) { log("nincs néző, leállás"); await quit(); }
+}function writeAtomic(name, data) {
   const f = path.join(outDir, name), tmp = f + ".tmp";
   fs.writeFileSync(tmp, JSON.stringify(data));
   fs.renameSync(tmp, f);
 }
 
+async function quit() { try { await browser.close(); } catch {} process.exit(0); }
 const browser = await puppeteer.launch({ executablePath, headless: "new", args: ["--no-sandbox", "--disable-gpu"] });
 const page = await browser.newPage();
 await page.setViewport({ width: 1400, height: 900 });
@@ -62,8 +74,12 @@ async function refresh(reason) {
       const { out, view, players } = await collect(page, id, g);
       const rev = Date.now();
       out.vrev = rev;
-      if (view) writeAtomic(`${id}.view.json`, view);
-      writeAtomic(`${id}.json`, out);
+      if (postUrl) await post({ id, data: out, view, live: true });
+      else {
+        if (view) writeAtomic(`${id}.view.json`, view);
+        writeAtomic(`${id}.json`, out);
+      }
+      if (out.status === "finished") { log("a játék befejeződött, leállás"); await quit(); }
       lastCount = out.actionCount;
       // vissza a Game fülre, onnan figyeljük a változást
       lastSig = await signature();
@@ -121,6 +137,7 @@ setInterval(async () => {
   } catch (e) { log("ellenőrzés:", e.message); }
 }, 120000);
 
-const quit = async () => { try { await browser.close(); } catch {} process.exit(0); };
 process.on("SIGINT", quit); process.on("SIGTERM", quit);
+// szívverés + időkorlát (a hub ebből tudja, hogy él a figyelő)
+if (postUrl) setInterval(async () => { try { await post({ id, hb: true }); } catch (e) { log("szívverés:", e.message); } if (maxMs && Date.now() - startedAt > maxMs) { log("időkorlát, leállás"); await quit(); } }, 45_000);
 browser.on("disconnected", () => process.exit(1));

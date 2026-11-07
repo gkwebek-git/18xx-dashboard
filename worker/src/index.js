@@ -13,6 +13,10 @@ const UA = "xx18-dashboard/1.0 (+https://github.com/gkwebek-git/18xx-dashboard; 
 const MIN_GAP = 10_000; // két 18xx.games kérés között legalább ennyi idő
 const DISPATCH_GAP = 45_000; // két kiolvasó-indítás között legalább ennyi
 const INFLIGHT_MAX = 6 * 60_000; // ennyi ideig várjuk meg a kiolvasót
+const LIVE_ALIVE = 150_000; // ennyi ideig számít élőnek a figyelő a szívverés után
+const LIVE_START_GRACE = 150_000; // indítás után ennyit várunk, mielőtt újat kérnénk
+const LIVE_IDLE_STOP = 15 * 60_000; // ennyi néző nélküli idő után leáll
+const MAX_LIVE = 3; // egyszerre futó élő figyelők száma
 const MAX_ACTIVE = 40; // egyszerre követett, még futó játékok
 const MAX_TOTAL = 200;
 const TRACK_PER_HOUR = 8; // egy IP-ről óránként hány új játék
@@ -66,6 +70,35 @@ export class Hub {
 
   async save() {
     await this.ctx.storage.put({ games: this.games, st: this.st });
+  }
+
+  liveAlive(g) {
+    return !!g.liveAt && Date.now() - g.liveAt < LIVE_ALIVE;
+  }
+
+  liveCount() {
+    const now = Date.now();
+    return Object.values(this.games).filter((g) => !g.gone && (this.liveAlive(g) || now - (g.liveDispatch || 0) < LIVE_START_GRACE)).length;
+  }
+
+  // ha nézik a játékot, de nem fut élő figyelő, indítunk egyet (GitHub Actions, egy nyitva tartott böngészőlappal)
+  async maybeLive(g) {
+    const now = Date.now();
+    if (g.gone || g.status === "finished" || !this.viewers(g.id) || this.liveAlive(g)) return;
+    if (now - (g.liveDispatch || 0) < LIVE_START_GRACE || this.liveCount() >= MAX_LIVE) return;
+    const e = this.env;
+    if (!e.GH_TOKEN) return;
+    g.liveDispatch = now;
+    try {
+      const res = await fetch(`https://api.github.com/repos/${e.GH_REPO}/actions/workflows/${e.GH_LIVE_WORKFLOW || "live.yml"}/dispatches`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${e.GH_TOKEN}`, accept: "application/vnd.github+json", "user-agent": "xx18-live", "x-github-api-version": "2022-11-28", "content-type": "application/json" },
+        body: JSON.stringify({ ref: e.GH_REF, inputs: { id: String(g.id) } }),
+      });
+      if (res.status !== 204) { console.error("élő indítás státusz", res.status, (await res.text()).slice(0, 200)); g.liveDispatch = now + 60_000; }
+    } catch (err) {
+      console.error("élő indítás hiba", String(err));
+    }
   }
 
   viewers(id) {
@@ -134,6 +167,7 @@ export class Hub {
     if (!g) return json({ error: "Ezt a játékot még nem követjük." }, 404);
     const pair = new WebSocketPair();
     this.ctx.acceptWebSocket(pair[1], [id]);
+    g.lastViewer = Date.now();
     const snap = await this.ctx.storage.get("s:" + id);
     if (snap) pair[1].send(JSON.stringify({ type: "snapshot", data: JSON.parse(snap) }));
     else pair[1].send(JSON.stringify({ type: "status", state: "pending" }));
@@ -144,6 +178,8 @@ export class Hub {
       await this.save();
       await this.schedule();
     }
+    await this.maybeLive(g);
+    await this.save();
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
 
@@ -235,6 +271,7 @@ export class Hub {
   interval(g) {
     const viewers = this.viewers(g.id);
     const active = Object.values(this.games).filter((x) => !x.gone && x.status !== "finished").length;
+    if (this.liveAlive(g) && g.status !== "finished") return Infinity; // az élő figyelő hozza az adatot, nem kérdezgetünk
     if (g.status === "finished") return viewers ? 180_000 : Infinity;
     if (viewers) return Math.max(45_000, MIN_GAP * active);
     const idle = Date.now() - (g.lastChange || g.addedAt || 0);
@@ -261,6 +298,11 @@ export class Hub {
         g.retryAt = now + this.backoff(g.fails);
       }
       this.st.inflight = null;
+    }
+    // leállt élő figyelők: visszaesünk a kímélő lekérdezésre, és ha még nézik, indítunk újat
+    for (const g of Object.values(this.games)) {
+      if (g.liveAt && !this.liveAlive(g)) { g.liveAt = 0; g.nextCheck = now; }
+      if (this.viewers(g.id)) { g.lastViewer = now; await this.maybeLive(g); }
     }
     // egy játék ellenőrzése
     const due = Object.values(this.games)
@@ -340,6 +382,8 @@ export class Hub {
     let t = Infinity;
     for (const g of Object.values(this.games)) {
       if (g.gone) continue;
+      if (g.liveAt && this.liveAlive(g)) t = Math.min(t, g.liveAt + LIVE_ALIVE + 1000);
+      else if (this.viewers(g.id) && g.status !== "finished") t = Math.min(t, now + LIVE_START_GRACE);
       if (Number.isFinite(g.nextCheck) && this.interval(g) !== Infinity) t = Math.min(t, Math.max(g.nextCheck, this.st.lastApi + MIN_GAP));
       if (g.dirty && !g.scraping) {
         const gate = this.st.inflight ? this.st.inflight.at + INFLIGHT_MAX : Math.max((this.st.lastDispatch || 0) + DISPATCH_GAP, g.retryAt || 0);
@@ -365,6 +409,15 @@ export class Hub {
     const g = this.games[id];
     if (!g) return json({ error: "ismeretlen játék" }, 404);
     const now = Date.now();
+    if (body.hb) {
+      g.liveAt = now;
+      if (this.viewers(id)) g.lastViewer = now;
+      const stop = !this.viewers(id) && now - (g.lastViewer || 0) > LIVE_IDLE_STOP;
+      if (stop) g.liveAt = 0;
+      await this.save();
+      await this.schedule();
+      return json({ ok: true, stop });
+    }
     if (this.st.inflight) {
       this.st.inflight.ids = this.st.inflight.ids.filter((x) => x !== id);
       if (!this.st.inflight.ids.length) this.st.inflight = null;
@@ -397,10 +450,13 @@ export class Hub {
       g.updatedAt = d.updatedAt || g.updatedAt;
       if (Array.isArray(d.players)) g.players = d.players.map((p) => p.name);
       this.broadcast(id, { type: "snapshot", data: d });
+      if (body.live) { g.liveAt = now; g.dirty = false; }
     }
     await this.save();
     await this.schedule();
-    return json({ ok: true });
+    const stop = !!body.live && !this.viewers(id) && now - (g.lastViewer || 0) > LIVE_IDLE_STOP;
+    if (stop) g.liveAt = 0;
+    return json({ ok: true, stop });
   }
 
   async gc(force) {
