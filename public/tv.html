@@ -16,7 +16,7 @@
   body.transparent .panel { background: rgba(17, 24, 35, .78); }
 
   #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; padding: 20px; display: grid;
-    grid-template-columns: 1060px 1fr; grid-template-rows: 60px 1fr 140px; gap: 14px; background:
+    grid-template-columns: var(--mapw, 1322px) 1fr; grid-template-rows: 50px 1fr 112px; gap: 14px; background:
     radial-gradient(1200px 600px at 15% -10%, rgba(88, 166, 255, .10), transparent 60%), radial-gradient(900px 500px at 100% 110%, rgba(242, 180, 90, .07), transparent 60%); }
   body.transparent #stage { background: none; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; min-width: 0; min-height: 0; overflow: hidden; }
@@ -70,22 +70,23 @@
   svg text.number { font-size: 21px; font-weight: 300; }
 
   /* jobb oszlop */
-  #side { grid-column: 2; grid-row: 2; display: grid; grid-template-rows: auto 1fr 172px; gap: 12px; min-height: 0; min-width: 0; }
-  #players { display: grid; gap: 10px; grid-template-columns: repeat(var(--n, 4), 1fr); }
-  .pl { background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--pc); border-radius: 14px; padding: 8px 12px 7px; min-width: 0; position: relative; }
+  #side { grid-column: 2; grid-row: 2; display: grid; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; min-width: 0; }
+  #players { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+  .pl { background: var(--panel); border: 1px solid var(--line); border-left: 7px solid var(--pc); border-radius: 14px; padding: 8px 14px 8px 12px; min-width: 0; position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 16px; align-items: center; }
   .pl.act { border-color: var(--pc); box-shadow: 0 0 0 1px var(--pc), 0 0 26px -4px var(--pc); }
-  .pl .nm { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-weight: 700; font-size: 19px; }
+  .pl .nm { display: flex; align-items: baseline; gap: 8px; font-weight: 700; font-size: 21px; min-width: 0; }
   .pl .nm span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pl .rk { color: var(--mut); font-size: 14px; font-weight: 600; }
-  .pl .val { font-size: 31px; font-weight: 800; line-height: 1.1; color: var(--pc); font-variant-numeric: tabular-nums; margin-top: 2px; }
-  .pl .sub { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; margin-top: 4px; font-size: 14px; color: var(--mut); }
-  .pl .sub b { color: var(--txt); font-weight: 600; font-variant-numeric: tabular-nums; }
-  .pl .hold { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; min-height: 22px; }
+  .pl .cash { text-align: right; line-height: 1; }
+  .pl .cash small { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); margin-bottom: 3px; }
+  .pl .cash b { font-size: 38px; font-weight: 800; color: var(--pc); font-variant-numeric: tabular-nums; }
+  .pl .st { display: grid; grid-template-columns: auto auto; gap: 0 12px; line-height: 16px; font-size: 13.5px; color: var(--mut); white-space: nowrap; }
+  .pl .st b { color: var(--txt); font-weight: 650; font-variant-numeric: tabular-nums; }
+  .pl .hold { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; min-height: 22px; }
   .hold i { display: inline-flex; align-items: center; gap: 3px; font-style: normal; font-size: 12px; font-weight: 600; background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; padding: 1px 5px 1px 2px; }
   .hold i img { width: 18px; height: 18px; object-fit: contain; border-radius: 4px; }
-  .pl .pd { position: absolute; right: 8px; top: -10px; background: var(--acc); color: #1a1205; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
-  .pl .turn { position: absolute; left: 12px; top: -10px; background: var(--pc); color: #0b0f15; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
-
+  .pl .pd { position: absolute; right: 10px; top: -10px; background: var(--acc); color: #1a1205; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+  .pl .turn { position: absolute; left: 14px; top: -10px; background: var(--pc); color: #0b0f15; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
   #corps { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(0, 1fr); gap: 8px; min-height: 0; }
   .co { background: var(--panel); border: 1px solid var(--line); border-left: 6px solid var(--cc, #666); border-radius: 12px; padding: 5px 10px 4px; display: grid; grid-template-rows: auto auto 1fr; min-width: 0; min-height: 0; overflow: hidden; }
   .co .r1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -101,14 +102,15 @@
   .co .r3 b { color: var(--txt); font-weight: 600; }
   .co .r3 em { font-style: normal; color: var(--acc); font-weight: 700; }
 
-  #bottom { display: grid; grid-template-columns: 1fr 196px 268px; gap: 12px; min-height: 0; }
+  #bottom { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; }
+  #trainBox { grid-column: 1; grid-row: 1; } #bankBox { grid-column: 2; grid-row: 1; } #chartBox { grid-column: 1 / 3; grid-row: 2; }
   #chartBox { padding: 8px 12px 6px; display: flex; flex-direction: column; }
   #chartBox h2, #trainBox h2, #marketPanel h2 { margin: 0 0 4px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
   #chartBox .cv { position: relative; flex: 1; min-height: 0; }
   #trainBox { padding: 8px 12px; }
-  #trainBox table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
-  #trainBox td { padding: 0; line-height: 14px; }
-  #trainBox td.t { font-weight: 800; width: 34px; }
+  #trainBox table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+  #trainBox td { padding: 0; line-height: 19px; }
+  #trainBox td.t { font-weight: 800; width: 44px; }
   #trainBox td.p { color: var(--mut); }
   #trainBox td.n { text-align: right; font-weight: 700; }
   #trainBox tr.z { opacity: .35; }
@@ -144,7 +146,7 @@
 
   <aside id="side">
     <div id="players"></div>
-    <div id="corps"></div>
+    
     <div id="bottom">
       <div class="panel" id="chartBox"><h2>Vagyon alakulása a körök során</h2><div class="cv"><canvas id="c2"></canvas></div></div>
       <div class="panel" id="trainBox"><h2>Vonatok</h2><div id="trains"></div></div>
@@ -236,12 +238,10 @@
       const hold = (v ? v.holdings : []).map((h) => `<i title="${esc(h.sym.replace("*", ""))}"><img src="${logoUrl(h.logo)}" alt="">${esc(h.pct.replace("%", ""))}</i>`).join("");
       return `<div class="pl ${acting.has(p.name) ? "act" : ""}" style="--pc:${pc}">
         ${acting.has(p.name) ? '<span class="turn">LÉP</span>' : ""}${v && v.priority ? '<span class="pd">Priority</span>' : ""}
-        <div class="nm"><span>${esc(p.name)}</span><span class="rk">#${rank.get(i)}</span></div>
-        <div class="val">${money(p.value)}</div>
-        <div class="sub"><span>Készpénz <b>${money(p.cash)}</b></span><span>Likv. <b>${money(p.liquidity)}</b></span><span>Részvény <b>${p.shares}</b></span><span>Cert <b>${p.certs}/${snap.certLimit || "?"}</b></span></div>
-        <div class="hold">${hold}</div>
-      </div>`;
-    }).join("");
+        <div class="c1"><div class="nm"><span>${esc(p.name)}</span><span class="rk">#${rank.get(i)}</span></div><div class="hold">${hold}</div></div>
+        <div class="cash"><small>Készpénz</small><b>${money(p.cash)}</b></div>
+        <div class="st"><span>Érték</span><b>${money(p.value)}</b><span>Likv.</span><b>${money(p.liquidity)}</b><span>Részvény</span><b>${p.shares}</b><span>Cert</span><b>${p.certs}/${snap.certLimit || "?"}</b></div>
+      </div>`;    }).join("");
   }
 
   // ---------- cégek ----------
@@ -276,7 +276,7 @@
     const el = $("trains");
     const t = view && view.info && view.info.trains;
     if (!t) { el.innerHTML = ""; return; }
-    const rows = t.rows.filter((r) => { const rem = (r[2] || "").split("/"); return /∞|inf/i.test(r[2]) || rem.length < 2 || (Number(rem[0]) || 0) > 0; }).map((r) => {
+    const rows = t.rows.map((r) => {
       const rem = (r[2] || "").split("/");
       const left = Number(rem[0]) || 0;
       return `<tr class="${left === 0 && rem.length > 1 && !/∞|inf/.test(r[2]) ? "z" : ""}"><td class="t">${esc(r[0])}</td><td class="p">${esc(r[1])}</td><td class="n">${esc((r[2] || "").replace(/\s/g, ""))}</td></tr>`;
@@ -298,6 +298,8 @@
     if (!view || !view.map) return;
     const svg = inl(view.map).replace(/<svg id="map"[^>]*width="([\d.]+)"[^>]*height="([\d.]+)"[^>]*>/, (m, w, h) => `<svg id="map" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">`);
     $("mapBox").innerHTML = svg;
+    const m = view.map.match(/<svg id="map"[^>]*width="([\d.]+)"[^>]*height="([\d.]+)"/);
+    if (m) $("stage").style.setProperty("--mapw", Math.min(1420, Math.round(850 * m[1] / m[2]) + 4) + "px");
   }
   function renderMarket() {
     if (!view || !view.market) return;
@@ -325,7 +327,7 @@
     if (!chart) {
       chart = new Chart($("c2"), { type: "line", data: { labels: h.map((x) => x.label), datasets },
         options: { interaction: { mode: "index", intersect: false },
-          plugins: { legend: { position: "right", labels: { color: "#e9eef5", boxWidth: 10, usePointStyle: true, font: { size: 12 } } } },
+          plugins: { legend: { position: "top", align: "end", labels: { color: "#e9eef5", boxWidth: 9, boxHeight: 9, padding: 10, usePointStyle: true, font: { size: 12 } } } },
           scales: { x: { ticks: { color: "#8a98ab", maxRotation: 0, autoSkip: true, maxTicksLimit: 9 }, grid: { display: false } }, y: { ticks: { color: "#8a98ab", callback: (v) => money(v) }, grid: { color: "rgba(138,152,171,.15)" }, beginAtZero: true } } } });
     } else { chart.data.labels = h.map((x) => x.label); chart.data.datasets = datasets; chart.update(); }
   }
@@ -340,7 +342,7 @@
       renderAll();
     } catch {}
   }
-  function renderAll() { renderIpo(); renderTop(); renderPlayers(); renderCorps(); renderTrains(); renderMap(); renderMarket(); renderChart(); }
+  function renderAll() { renderIpo(); renderTop(); renderPlayers(); renderTrains(); renderMap(); renderMarket(); renderChart(); }
 
   function onSnapshot(d) {
     snap = d; state = "live"; hideMsg();
