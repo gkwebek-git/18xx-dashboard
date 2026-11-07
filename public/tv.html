@@ -49,9 +49,12 @@
   #ipo .g { display: flex; gap: 14px; }
   #ipo .g div { display: flex; flex-direction: column; font-size: 14px; line-height: 17px; font-weight: 600; text-align: right; }
   #ipo .g div:nth-child(2) { border-left: 1px solid var(--line); padding-left: 12px; }
-  #intr { margin-top: auto; border-top: 1px solid var(--line); padding-top: 5px; font-size: 13px; color: var(--mut); }
-  #intr div { display: flex; justify-content: space-between; gap: 10px; line-height: 17px; }
-  #intr b { color: var(--txt); font-weight: 800; }
+  #bankBox { padding: 7px 12px 4px; display: flex; flex-direction: column; }
+  #bankBox h2 { margin: 0 0 4px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
+  #intr { font-size: 13px; color: var(--mut); display: flex; flex-direction: column; }
+  #intr div.sep { border-top: 1px solid var(--line); margin-top: 3px; padding-top: 3px; }
+  #intr div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; line-height: 17px; }
+  #intr b { color: var(--txt); font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
   #trainBox { display: flex; flex-direction: column; }
   #trains { min-height: 0; overflow: hidden; }
   .live small { color: var(--mut); font-size: 14px; display: block; }
@@ -98,7 +101,7 @@
   .co .r3 b { color: var(--txt); font-weight: 600; }
   .co .r3 em { font-style: normal; color: var(--acc); font-weight: 700; }
 
-  #bottom { display: grid; grid-template-columns: 1fr 292px; gap: 14px; min-height: 0; }
+  #bottom { display: grid; grid-template-columns: 1fr 196px 268px; gap: 12px; min-height: 0; }
   #chartBox { padding: 8px 12px 6px; display: flex; flex-direction: column; }
   #chartBox h2, #trainBox h2, #marketPanel h2 { margin: 0 0 4px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
   #chartBox .cv { position: relative; flex: 1; min-height: 0; }
@@ -144,7 +147,8 @@
     <div id="corps"></div>
     <div id="bottom">
       <div class="panel" id="chartBox"><h2>Vagyon alakulása a körök során</h2><div class="cv"><canvas id="c2"></canvas></div></div>
-      <div class="panel" id="trainBox"><h2>Vonatok</h2><div id="trains"></div><div id="intr"></div></div>
+      <div class="panel" id="trainBox"><h2>Vonatok</h2><div id="trains"></div></div>
+      <div class="panel" id="bankBox"><h2>Bank és hitelek</h2><div id="intr"></div></div>
     </div>
   </aside>
 
@@ -280,11 +284,12 @@
     el.innerHTML = `<table>${rows}</table>${view.pool ? `<div class="pool">${esc(view.pool)}</div>` : ""}`;
     const bank = (view.bank || []).reduce((o, r) => ((o[r[0]] = r[1]), o), {});
     const B = (k) => esc(bank[k] || "–");
-    const bt = (l, v) => `<div><small>${l}</small><b>${v}</b></div>`;
-    $("bankTop").innerHTML = bt("Kamat / hitel", B("Interest per Loan")) + bt("Jövőbeli kamat", B("Future Interest per Loan")) + bt("Hitelek", B("Loans")) + bt("Hitel értéke", B("Loan Value")) + bt("El nem indult cég", B("Unstarted corporations"));
+    const row = (l, v, cls) => `<div${cls ? ` class="${cls}"` : ""}><span>${l}</span><b>${v}</b></div>`;
     const ik = Object.keys(bank);
     const ir = ik.find((k) => /repaid/i.test(k)), it = ik.find((k) => /more loans taken/i.test(k));
-    $("intr").innerHTML = (ir ? `<div><span>Kamat, ha még 2 hitelt visszafizetnek</span><b>${esc(bank[ir])}</b></div>` : "") + (it ? `<div><span>Kamat, ha még 4 hitelt felvesznek</span><b>${esc(bank[it])}</b></div>` : "");
+    $("intr").innerHTML = row("Kamat / hitel", B("Interest per Loan")) + row("Jövőbeli kamat", B("Future Interest per Loan")) + row("Hitelek", B("Loans")) + row("Hitel értéke", B("Loan Value")) + row("El nem indult cég", B("Unstarted corporations"))
+      + (ir ? row("Kamat, ha 2 hitelt visszafizetnek", esc(bank[ir]), "sep") : "") + (it ? row("Kamat, ha 4 hitelt felvesznek", esc(bank[it])) : "");
+    $("bankTop").innerHTML = "";
     $("bank").innerHTML = "";
   }
 
