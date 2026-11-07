@@ -1,8 +1,7 @@
 // Egy már megnyitott játékoldalról összeállítja a kimenetet: Spreadsheet (játékosok, történet) + TV-nézet adatai.
 import { extractView } from "./extract-view.mjs";
 
-export async function collect(page, id, g) {
-  const actionCount = Array.isArray(g.actions) ? g.actions.length : 0;
+export async function collect(page, id, gIn) {
   await page.evaluate(() => { if (document.getElementById("player_details")) return; const a = [...document.querySelectorAll("#game_menu a")].find((e) => e.textContent.trim() === "Spreadsheet"); if (a) a.click(); });
   await page.waitForSelector("#player_details", { timeout: 60000 });
   await new Promise((r) => setTimeout(r, 400));
@@ -55,6 +54,10 @@ export async function collect(page, id, g) {
       .filter((h) => /^(OR|SR|ISR)\b/.test(h.label))
       .reverse()
       .map((h) => ({ label: h.label, values: h.values }));
+
+    const g = await gIn; // az API-válasz addigra általában már megjött
+
+    const actionCount = Array.isArray(g.actions) ? g.actions.length : 0;
 
     const out = {
       id: Number(id),

@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { collect } from "./collect.mjs";
 
-process.env.TAB_SLEEP ??= "350";
+process.env.TAB_SLEEP ??= "100";
 const args = process.argv.slice(2);
 const id = args.find((a) => /^\d+$/.test(a));
 const outDir = (args.find((a) => a.startsWith("--out=")) || "--out=public/data").split("=")[1];
@@ -45,7 +45,8 @@ async function post(body) {
   fs.renameSync(tmp, f);
 }
 
-async function quit() { try { await browser.close(); } catch {} process.exit(0); }
+let quitting = false;
+async function quit() { quitting = true; try { await browser.close(); } catch {} process.exit(0); }
 const browser = await puppeteer.launch({ executablePath, headless: "new", args: ["--no-sandbox", "--disable-gpu"] });
 const page = await browser.newPage();
 await page.setViewport({ width: 1400, height: 900 });
@@ -70,8 +71,9 @@ async function refresh(reason) {
     do {
       dirty = false;
       const t0 = Date.now();
-      const g = await api();
-      const { out, view, players } = await collect(page, id, g);
+      const gp = api(); // az API-kérés párhuzamosan fut a kiolvasással
+      gp.catch(() => {});
+      const { out, view, players } = await collect(page, id, gp);
       const rev = Date.now();
       out.vrev = rev;
       if (postUrl) await post({ id, data: out, view, live: true });
@@ -79,7 +81,6 @@ async function refresh(reason) {
         if (view) writeAtomic(`${id}.view.json`, view);
         writeAtomic(`${id}.json`, out);
       }
-      if (out.status === "finished") { log("a játék befejeződött, leállás"); await quit(); }
       lastCount = out.actionCount;
       // vissza a Game fülre, onnan figyeljük a változást
       lastSig = await signature();
@@ -108,7 +109,7 @@ await page.exposeFunction("__xxChanged", () => {
     if (busy) return;
     const s = await signature();
     if (s && s !== lastSig) { log("változás az oldalon, kiolvasás…"); await refresh("élő"); }
-  }, 1200);
+  }, 350);
 });
 async function installObserver() {
   await page.evaluate(() => {
@@ -140,4 +141,4 @@ setInterval(async () => {
 process.on("SIGINT", quit); process.on("SIGTERM", quit);
 // szívverés + időkorlát (a hub ebből tudja, hogy él a figyelő)
 if (postUrl) setInterval(async () => { try { await post({ id, hb: true }); } catch (e) { log("szívverés:", e.message); } if (maxMs && Date.now() - startedAt > maxMs) { log("időkorlát, leállás"); await quit(); } }, 45_000);
-browser.on("disconnected", () => process.exit(1));
+browser.on("disconnected", () => process.exit(quitting ? 0 : 1));

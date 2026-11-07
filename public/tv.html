@@ -372,7 +372,7 @@
   async function start() {
     if (LOCAL) {
       const poll = async () => { try { const r = await fetch(`data/${game}.json?t=${Date.now()}`, { cache: "no-store" }); if (r.ok) onSnapshot({ ...(await r.json()), fresh: Date.now() }); } catch {} };
-      await poll(); setInterval(poll, 2000); return;
+      await poll(); setInterval(poll, 1000); return;
     }
     try {
       const r = await fetch(`${HUB}/api/game/${game}`, { cache: "no-store" });
