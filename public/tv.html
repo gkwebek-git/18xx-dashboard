@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>18xx TV</title>
+<style>
+  :root {
+    --bg: #090d14; --panel: #111823; --panel2: #162030; --line: #22303f; --txt: #e9eef5; --mut: #8a98ab;
+    --acc: #f2b45a; --good: #3fb950; --blue: #58a6ff; --bad: #ff7b72;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--txt); font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  body.transparent { background: transparent; }
+  body.transparent .panel { background: rgba(17, 24, 35, .78); }
+
+  #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; padding: 20px; display: grid;
+    grid-template-columns: 1060px 1fr; grid-template-rows: 60px 1fr 246px; gap: 14px; background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(88, 166, 255, .10), transparent 60%), radial-gradient(900px 500px at 100% 110%, rgba(242, 180, 90, .07), transparent 60%); }
+  body.transparent #stage { background: none; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; min-width: 0; min-height: 0; overflow: hidden; }
+
+  /* fejléc */
+  #top { grid-column: 1 / 3; display: flex; align-items: center; gap: 18px; padding: 0 4px; min-width: 0; }
+  .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .hex { width: 46px; height: 46px; flex: none; }
+  .brand h1 { margin: 0; font-size: 30px; line-height: 1; letter-spacing: .2px; white-space: nowrap; }
+  .brand small { display: block; color: var(--mut); font-size: 15px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+  .chips { display: flex; gap: 10px; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
+  .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; font-size: 17px; color: var(--mut); white-space: nowrap; }
+  .chip b { color: var(--txt); font-weight: 650; }
+  .chip.warn { border-color: rgba(242, 180, 90, .55); color: var(--acc); background: rgba(242, 180, 90, .08); }
+  .chip.step { color: var(--txt); border-color: rgba(88, 166, 255, .5); background: rgba(88, 166, 255, .08); }
+  .live { display: flex; align-items: center; gap: 10px; font-size: 17px; white-space: nowrap; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 rgba(63, 185, 80, .6); animation: pulse 2s infinite; flex: none; }
+  .dot.upd { background: var(--acc); animation: pulse2 .8s infinite; }
+  .dot.off { background: var(--bad); animation: none; }
+  .dot.done { background: var(--mut); animation: none; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(63, 185, 80, 0); } 100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); } }
+  @keyframes pulse2 { 50% { opacity: .3; } }
+  .live small { color: var(--mut); font-size: 14px; display: block; }
+
+  /* térkép */
+  #mapPanel { grid-column: 1; grid-row: 2; display: flex; align-items: center; justify-content: center; background: #04070b; position: relative; }
+  #mapPanel svg { width: 100%; height: 100%; display: block; }
+  #mapPanel .tag { position: absolute; left: 14px; top: 10px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); z-index: 2; }
+  /* az 18xx.games térkép-szabályai */
+  svg .tile { fill: none; stroke-width: 1; text-anchor: middle; }
+  svg .tile__water { fill: none; stroke: rgb(20, 126, 190); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  svg .tile__text { fill: black; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+  svg text.number { font-size: 21px; font-weight: 300; }
+
+  /* jobb oszlop */
+  #side { grid-column: 2; grid-row: 2; display: grid; grid-template-rows: auto 1fr 150px; gap: 12px; min-height: 0; min-width: 0; }
+  #players { display: grid; gap: 10px; grid-template-columns: repeat(var(--n, 4), 1fr); }
+  .pl { background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--pc); border-radius: 14px; padding: 8px 12px 7px; min-width: 0; position: relative; }
+  .pl.act { border-color: var(--pc); box-shadow: 0 0 0 1px var(--pc), 0 0 26px -4px var(--pc); }
+  .pl .nm { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-weight: 700; font-size: 19px; }
+  .pl .nm span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pl .rk { color: var(--mut); font-size: 14px; font-weight: 600; }
+  .pl .val { font-size: 31px; font-weight: 800; line-height: 1.1; color: var(--pc); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .pl .sub { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; margin-top: 4px; font-size: 14px; color: var(--mut); }
+  .pl .sub b { color: var(--txt); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .pl .hold { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; min-height: 22px; }
+  .hold i { display: inline-flex; align-items: center; gap: 3px; font-style: normal; font-size: 12px; font-weight: 600; background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; padding: 1px 5px 1px 2px; }
+  .hold i img { width: 18px; height: 18px; object-fit: contain; border-radius: 4px; }
+  .pl .pd { position: absolute; right: 8px; top: -10px; background: var(--acc); color: #1a1205; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+  .pl .turn { position: absolute; left: 12px; top: -10px; background: var(--pc); color: #0b0f15; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
+
+  #corps { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(0, 1fr); gap: 8px; min-height: 0; }
+  .co { background: var(--panel); border: 1px solid var(--line); border-left: 6px solid var(--cc, #666); border-radius: 12px; padding: 5px 10px 4px; display: grid; grid-template-rows: auto auto 1fr; min-width: 0; min-height: 0; overflow: hidden; }
+  .co .r1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .co .lg { width: 30px; height: 30px; border-radius: 7px; background: var(--cc, #444); display: flex; align-items: center; justify-content: center; flex: none; overflow: hidden; }
+  .co .lg img { width: 26px; height: 26px; object-fit: contain; }
+  .co .sy { font-weight: 800; font-size: 20px; }
+  .co .pr { color: var(--acc); font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .co .tr { margin-left: auto; display: flex; gap: 4px; }
+  .co .tr b { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 0 7px; font-size: 14px; font-weight: 700; }
+  .co .r2 { font-size: 12.5px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .co .r2 b { color: var(--txt); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .co .r3 { font-size: 12.5px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: end; }
+  .co .r3 b { color: var(--txt); font-weight: 600; }
+  .co .r3 em { font-style: normal; color: var(--acc); font-weight: 700; }
+
+  #bottom { display: grid; grid-template-columns: 1fr 292px; gap: 14px; min-height: 0; }
+  #chartBox { padding: 8px 12px 6px; display: flex; flex-direction: column; }
+  #chartBox h2, #trainBox h2, #marketPanel h2 { margin: 0 0 4px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
+  #chartBox .cv { position: relative; flex: 1; min-height: 0; }
+  #trainBox { padding: 8px 12px; }
+  #trainBox table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  #trainBox td { padding: 0; line-height: 15px; }
+  #trainBox td.t { font-weight: 800; width: 34px; }
+  #trainBox td.p { color: var(--mut); }
+  #trainBox td.n { text-align: right; font-weight: 700; }
+  #trainBox tr.z { opacity: .35; }
+  #trainBox tr.now td.t { color: var(--acc); }
+  #trainBox .pool { margin-top: 4px; font-size: 12px; color: var(--mut); }
+
+  /* tőzsde */
+  #marketPanel { grid-column: 1 / 3; grid-row: 3; padding: 8px 12px; position: relative; }
+  #marketBox { position: absolute; left: 12px; top: 30px; transform-origin: 0 0; }
+  #marketBox * { box-sizing: content-box; }
+  #marketPanel .bank { position: absolute; right: 14px; top: 8px; font-size: 13px; color: var(--mut); }
+  #marketPanel .bank b { color: var(--txt); }
+
+  #msg { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; font-size: 34px; color: var(--mut); padding: 0 200px; z-index: 5; background: var(--bg); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header id="top">
+    <div class="brand">
+      <svg class="hex" viewBox="0 0 46 46"><polygon points="23,2 42,12.5 42,33.5 23,44 4,33.5 4,12.5" fill="#f2e35a" stroke="#0a0f16" stroke-width="2"/><text x="23" y="28" text-anchor="middle" font-size="14" font-weight="800" fill="#1a1a1a" font-family="Segoe UI, sans-serif">18xx</text></svg>
+      <div><h1 id="title">18xx</h1><small id="desc"></small></div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="live" id="live"></div>
+  </header>
+
+  <section class="panel" id="mapPanel"><div id="mapBox" style="width:100%;height:100%"></div></section>
+
+  <aside id="side">
+    <div id="players"></div>
+    <div id="corps"></div>
+    <div id="bottom">
+      <div class="panel" id="chartBox"><h2>Vagyon alakulása a körök során</h2><div class="cv"><canvas id="c2"></canvas></div></div>
+      <div class="panel" id="trainBox"><h2>Vonatok</h2><div id="trains"></div></div>
+    </div>
+  </aside>
+
+  <section class="panel" id="marketPanel">
+    <h2>Tőzsde – részvényárfolyamok</h2>
+    <div class="bank" id="bank"></div>
+    <div id="marketBox"></div>
+  </section>
+  <div id="msg"></div>
+</div>
+
+<script src="chart.umd.js"></script>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const HUB = (q.get("hub") || "https://xx18-live.szilagyijanoswork2.workers.dev").replace(/\/+$/, "");
+  const game = (q.get("game") || "").replace(/\D/g, "");
+  const LOCAL = q.get("local") === "1";
+  if (q.get("bg") === "transparent") document.body.classList.add("transparent");
+  const PALETTE = ["#ff7b72", "#58a6ff", "#3fb950", "#d29922", "#bc8cff", "#39c5cf"];
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const money = (n) => "$" + Math.round(n).toLocaleString("hu-HU").replace(/\u00a0/g, " ");
+
+  // ---------- 1920×1080-as vászon, bármekkora monitorra illesztve ----------
+  const stage = $("stage");
+  function fit() {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    stage.style.transform = `translate(-50%, -50%) scale(${s})`;
+  }
+  addEventListener("resize", fit); fit();
+
+  if (!game) { location.replace("./"); return; }
+
+  let snap = null, view = null, viewRev = 0, state = "connecting", chart = null;
+
+  function showMsg(t) { $("msg").style.display = "flex"; $("msg").textContent = t; }
+  function hideMsg() { $("msg").style.display = "none"; }
+
+  const logoUrl = (u) => (view && view.logos && view.logos[u]) || (u ? "https://18xx.games" + u : "");
+  const inl = (html) => String(html).replace(/(href|src)="(\/[^"]+\.(?:svg|png|jpe?g|webp|gif))"/g, (m, a, u) => `${a}="${logoUrl(u)}"`);
+
+  // ---------- fejléc ----------
+  function renderTop() {
+    if (!snap) return;
+    $("title").textContent = snap.title || "18xx";
+    $("desc").textContent = (snap.description || "").trim();
+    document.title = (snap.title || "18xx") + " – TV";
+    const chips = [];
+    const st = (view && view.status) || "";
+    const phase = (/Phase\s+([^\s-]+)/.exec(st) || [])[1];
+    const rnd = (/(Operating Round|Stock Round|Auction Round|Draft Round|Initial Stock Round)[^-]*/i.exec(st) || [])[0];
+    const step = (st.split(" - ")[2] || "").trim();
+    const endNote = (/Game Ends[^]*$/i.exec(st) || [])[0];
+    if (phase) chips.push(`<span class="chip">Fázis <b>${esc(phase)}</b></span>`);
+    chips.push(`<span class="chip"><b>${esc(rnd ? rnd.trim() : snap.round || "")}</b>${snap.turn ? " · " + snap.turn + ". forduló" : ""}</span>`);
+    if (step && !/Final phase/i.test(step)) chips.push(`<span class="chip step">${esc(step)}</span>`);
+    if (endNote) chips.push(`<span class="chip warn">⚑ ${esc(endNote)}</span>`);
+    $("chips").innerHTML = chips.join("");
+    paintLive();
+  }
+
+  function paintLive() {
+    if (!snap) return;
+    const fin = snap.status === "finished";
+    const lbl = { live: fin ? "Befejezett játék" : "Élő játék", updating: "Új lépés – frissítés…", offline: "Újracsatlakozás…", error: "Frissítési hiba", connecting: "Csatlakozás…" }[state] || "";
+    const cls = state === "updating" ? "upd" : state === "offline" || state === "error" ? "off" : fin ? "done" : "";
+    const t = snap.fresh ? new Date(snap.fresh).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "";
+    const last = snap.updatedAt ? new Date(snap.updatedAt * 1000).toLocaleString("hu-HU", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+    $("live").innerHTML = `<i class="dot ${cls}"></i><div><b>${lbl}</b><small>frissítve: ${t}${last ? " · utolsó lépés: " + last : ""}</small></div>`;
+  }
+
+  // ---------- játékosok ----------
+  function renderPlayers() {
+    if (!snap) return;
+    const ps = snap.players || [];
+    const order = ps.map((p, i) => ({ v: p.value, i })).sort((a, b) => b.v - a.v);
+    const rank = new Map(order.map((o, r) => [o.i, r + 1]));
+    const acting = new Set(snap.acting || []);
+    const vp = (view && view.players) || [];
+    $("players").style.setProperty("--n", ps.length);
+    $("players").innerHTML = ps.map((p, i) => {
+      const pc = PALETTE[i % PALETTE.length];
+      const v = vp.find((x) => x.name === p.name);
+      const hold = (v ? v.holdings : []).map((h) => `<i title="${esc(h.sym.replace("*", ""))}"><img src="${logoUrl(h.logo)}" alt="">${esc(h.pct.replace("%", ""))}</i>`).join("");
+      return `<div class="pl ${acting.has(p.name) ? "act" : ""}" style="--pc:${pc}">
+        ${acting.has(p.name) ? '<span class="turn">LÉP</span>' : ""}${v && v.priority ? '<span class="pd">Priority</span>' : ""}
+        <div class="nm"><span>${esc(p.name)}</span><span class="rk">#${rank.get(i)}</span></div>
+        <div class="val">${money(p.value)}</div>
+        <div class="sub"><span>Készpénz <b>${money(p.cash)}</b></span><span>Likv. <b>${money(p.liquidity)}</b></span><span>Részvény <b>${p.shares}</b></span><span>Cert <b>${p.certs}/${snap.certLimit || "?"}</b></span></div>
+        <div class="hold">${hold}</div>
+      </div>`;
+    }).join("");
+  }
+
+  // ---------- cégek ----------
+  const shareNum = (s) => (String(s).match(/\d+/) || ["0"])[0];
+  function renderCorps() {
+    if (!view || !view.corps) { $("corps").innerHTML = ""; return; }
+    $("corps").innerHTML = view.corps.map((c) => {
+      const price = (c.treasury && c.treasury[2]) || (c.market && c.market[2]) || "";
+      const pres = (c.holders || []).filter((h) => h.pres)[0];
+      const others = (c.holders || []).filter((h) => !h.pres);
+      const tr = String(c.trains || "").split(/\s+/).filter(Boolean).map((t) => `<b>${esc(t)}</b>`).join("");
+      const holders = [pres ? `<b>${esc(pres.name)}</b> ${shareNum(pres.shares)}` : "", ...others.map((h) => `${esc(h.name)} ${shareNum(h.shares)}`)].filter(Boolean).join(" · ");
+      const treas = c.treasury && c.treasury[1] ? ` · kincstár ${esc(c.treasury[1])}` : "";
+      return `<div class="co" style="--cc:${esc(c.bg || "#666")}">
+        <div class="r1"><span class="lg">${c.logo ? `<img src="${logoUrl(c.logo)}" alt="">` : ""}</span>
+          <span class="sy">${esc(c.sym)}</span><span class="pr">${esc(price)}</span><span class="tr">${tr || '<b style="opacity:.4">–</b>'}</span></div>
+        <div class="r2">Kassza <b>${esc(c.cash)}</b>${c.lastRun ? ` · utolsó futam <b>${esc(c.lastRun)}</b>` : ""}${c.loans && c.loans !== "0/10" ? ` · hitel <b>${esc(c.loans)}</b>` : ""} · ${c.tokens.length} token</div>
+        <div class="r3">${holders}${treas}</div>
+      </div>`;
+    }).join("");
+  }
+
+  // ---------- vonatok, bank ----------
+  function renderTrains() {
+    const el = $("trains");
+    const t = view && view.info && view.info.trains;
+    if (!t) { el.innerHTML = ""; return; }
+    const rows = t.rows.filter((r) => { const rem = (r[2] || "").split("/"); return /∞|inf/i.test(r[2]) || rem.length < 2 || (Number(rem[0]) || 0) > 0; }).map((r) => {
+      const rem = (r[2] || "").split("/");
+      const left = Number(rem[0]) || 0;
+      return `<tr class="${left === 0 && rem.length > 1 && !/∞|inf/.test(r[2]) ? "z" : ""}"><td class="t">${esc(r[0])}</td><td class="p">${esc(r[1])}</td><td class="n">${esc((r[2] || "").replace(/\s/g, ""))}</td></tr>`;
+    }).join("");
+    el.innerHTML = `<table>${rows}</table>${view.pool ? `<div class="pool">${esc(view.pool)}</div>` : ""}`;
+    const bank = (view.bank || []).reduce((o, r) => ((o[r[0]] = r[1]), o), {});
+    $("bank").innerHTML = `Hitel <b>${esc(bank["Loans"] || "–")}</b> · kamat <b>${esc(bank["Interest per Loan"] || "–")}</b> → <b>${esc(bank["Future Interest per Loan"] || "–")}</b> · el nem indult cég <b>${esc(bank["Unstarted corporations"] || "–")}</b>`;
+  }
+
+  // ---------- térkép és tőzsde ----------
+  function renderMap() {
+    if (!view || !view.map) return;
+    const svg = inl(view.map).replace(/<svg id="map"[^>]*width="([\d.]+)"[^>]*height="([\d.]+)"[^>]*>/, (m, w, h) => `<svg id="map" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">`);
+    $("mapBox").innerHTML = svg;
+  }
+  function renderMarket() {
+    if (!view || !view.market) return;
+    const box = $("marketBox");
+    box.style.transform = "none";
+    box.innerHTML = inl(view.market);
+    const avail = $("marketPanel").clientWidth - 24, availH = $("marketPanel").clientHeight - 38;
+    const w = box.scrollWidth || box.firstElementChild?.scrollWidth || 1, h = box.scrollHeight || 1;
+    const k = Math.min(avail / w, availH / h, 1.15);
+    box.style.transform = `scale(${k})`;
+  }
+
+  // ---------- diagram ----------
+  function renderChart() {
+    if (!snap) return;
+    const ps = snap.players || [], h = snap.history || [];
+    Chart.defaults.font.family = '"Segoe UI", system-ui, sans-serif';
+    Chart.defaults.font.size = 11;
+    Chart.defaults.maintainAspectRatio = false;
+    Chart.defaults.animation.duration = 700;
+    const datasets = ps.map((p, i) => ({ label: p.name, data: h.map((x) => x.values[i] ?? null), borderColor: PALETTE[i % PALETTE.length], backgroundColor: PALETTE[i % PALETTE.length], spanGaps: true, pointRadius: 0, borderWidth: 2.5, tension: 0.3 }));
+    if (!chart) {
+      chart = new Chart($("c2"), { type: "line", data: { labels: h.map((x) => x.label), datasets },
+        options: { interaction: { mode: "index", intersect: false },
+          plugins: { legend: { position: "right", labels: { color: "#e9eef5", boxWidth: 10, usePointStyle: true, font: { size: 12 } } } },
+          scales: { x: { ticks: { color: "#8a98ab", maxRotation: 0, autoSkip: true, maxTicksLimit: 9 }, grid: { display: false } }, y: { ticks: { color: "#8a98ab", callback: (v) => money(v) }, grid: { color: "rgba(138,152,171,.15)" }, beginAtZero: true } } } });
+    } else { chart.data.labels = h.map((x) => x.label); chart.data.datasets = datasets; chart.update(); }
+  }
+
+  // ---------- adatok kezelése ----------
+  async function loadView(rev) {
+    try {
+      const r = await fetch(LOCAL ? `data/${game}.view.json` : `${HUB}/api/game/${game}/view`, { cache: "no-store" });
+      if (!r.ok) return;
+      view = await r.json();
+      viewRev = rev || 1;
+      renderAll();
+    } catch {}
+  }
+  function renderAll() { renderTop(); renderPlayers(); renderCorps(); renderTrains(); renderMap(); renderMarket(); renderChart(); }
+
+  function onSnapshot(d) {
+    snap = d; state = "live"; hideMsg();
+    if (d.vrev && d.vrev !== viewRev) loadView(d.vrev); else if (!d.vrev && LOCAL && !view) loadView(1);
+    renderTop(); renderPlayers(); renderChart();
+  }
+
+  let ws = null, retry = 0, timer = null;
+  function connect() {
+    clearTimeout(timer);
+    ws = new WebSocket(HUB.replace(/^http/, "ws") + "/api/ws/" + game);
+    ws.onopen = () => { retry = 0; };
+    ws.onmessage = (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m.type === "snapshot") onSnapshot(m.data);
+      else if (m.type === "status") {
+        if (!snap) return showMsg(m.state === "error" ? "Hiba az adatok kiolvasásakor, újrapróbáljuk." : "Az első adatok készülnek… (általában 1–2 perc)");
+        state = m.state; paintLive();
+      }
+    };
+    ws.onclose = () => { if (snap) { state = "offline"; paintLive(); } retry = Math.min(retry + 1, 6); timer = setTimeout(connect, 1000 * 2 ** retry); };
+    ws.onerror = () => { try { ws.close(); } catch {} };
+  }
+  setInterval(() => { if (ws && ws.readyState === 1) ws.send("ping"); }, 25000);
+
+  async function start() {
+    if (LOCAL) {
+      const poll = async () => { try { const r = await fetch(`data/${game}.json?t=${Date.now()}`, { cache: "no-store" }); if (r.ok) onSnapshot({ ...(await r.json()), fresh: Date.now() }); } catch {} };
+      await poll(); setInterval(poll, 5000); return;
+    }
+    try {
+      const r = await fetch(`${HUB}/api/game/${game}`, { cache: "no-store" });
+      if (r.status === 404) return showMsg("Ezt a játékot még nem követjük. Add hozzá a főoldalon.");
+      if (r.status === 200) onSnapshot(await r.json()); else showMsg("Az első adatok készülnek… (általában 1–2 perc)");
+    } catch { showMsg("Nem érem el a szervert."); }
+    connect();
+  }
+  start();
+})();
+</script>
+</body>
+</html>

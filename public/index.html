@@ -78,6 +78,7 @@
     <h1 id="title">18xx<small id="sub"></small></h1>
     <div class="chips">
       <span class="chip" id="round"></span>
+      <a class="chip" id="tvlink" href="#" style="text-decoration:none;color:inherit">📺 TV nézet</a>
       <span class="chip" id="live"><i class="dot"></i><b>–</b></span>
     </div>
   </header>
@@ -310,7 +311,7 @@
     }).catch(() => { $("gameList").innerHTML = `<p class="muted">A lista most nem tölthető be.</p>`; });
   }
 
-  if (game) startLive(); else startLanding();
+  if (game) { const a = $("tvlink"); if (a) a.href = `tv.html?game=${game}${q.get("hub") ? "&hub=" + encodeURIComponent(q.get("hub")) : ""}`; startLive(); } else startLanding();
 })();
 </script>
 </body>

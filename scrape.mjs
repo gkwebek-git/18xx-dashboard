@@ -6,6 +6,7 @@
 import puppeteer from "puppeteer-core";
 import fs from "node:fs";
 import path from "node:path";
+import { extractView } from "./extract-view.mjs";
 
 const args = process.argv.slice(2);
 const ids = args.filter((a) => /^\d+$/.test(a));
@@ -127,12 +128,20 @@ async function scrapeOne(browser, id) {
       turn: g.turn,
       updatedAt: g.updated_at,
       actionCount,
+      acting: (g.acting ?? []).map((pid) => (g.players ?? []).find((p) => p.id === pid)?.name).filter(Boolean),
       certLimit,
       players,
       history,
     };
+    let view = null;
+    try {
+      view = await extractView(page);
+    } catch (e) {
+      console.warn(`[${id}] a TV-nézet adatai nem olvashatók ki: ${e.message}`);
+    }
     fs.writeFileSync(path.join(outDir, `${id}.json`), JSON.stringify(out));
-    if (postUrl) await post({ id: String(id), data: out });
+    if (view) fs.writeFileSync(path.join(outDir, `${id}.view.json`), JSON.stringify(view));
+    if (postUrl) await post({ id: String(id), data: out, view });
     console.log(`[${id}] kész: ${players.map((p) => `${p.name} $${p.value}`).join(", ")}`);
     return true;
   } finally {

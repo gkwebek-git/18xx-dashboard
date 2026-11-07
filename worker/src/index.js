@@ -89,7 +89,9 @@ export class Hub {
       if (req.method === "GET" && p === "/api/games") return this.listGames();
       if (req.method === "POST" && p === "/api/track") return await this.track(req);
       if (req.method === "POST" && p === "/api/ingest") return await this.ingest(req);
-      let m = /^\/api\/game\/(\d{1,9})$/.exec(p);
+      let m = /^\/api\/game\/(\d{1,9})\/view$/.exec(p);
+      if (req.method === "GET" && m) return await this.getView(m[1]);
+      m = /^\/api\/game\/(\d{1,9})$/.exec(p);
       if (req.method === "GET" && m) return await this.getSnapshot(m[1]);
       m = /^\/api\/ws\/(\d{1,9})$/.exec(p);
       if (req.method === "GET" && m) return await this.openSocket(req, m[1]);
@@ -118,6 +120,12 @@ export class Hub {
     const snap = await this.ctx.storage.get("s:" + id);
     if (!snap) return json({ pending: true, id: Number(id), status: g.status, title: g.title }, 202);
     return new Response(snap, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+  }
+
+  async getView(id) {
+    const v = await this.ctx.storage.get("v:" + id);
+    if (!v) return json({ error: "Ehhez a játékhoz még nincs TV-nézet." }, 404);
+    return new Response(v, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
   }
 
   async openSocket(req, id) {
@@ -369,6 +377,13 @@ export class Hub {
       this.broadcast(id, { type: "status", state: "error" });
     } else {
       const d = { ...body.data, fresh: now };
+      if (body.view && typeof body.view === "object") {
+        d.vrev = now;
+        await this.ctx.storage.put("v:" + id, JSON.stringify(body.view));
+      } else {
+        const prev = await this.ctx.storage.get("s:" + id);
+        if (prev) d.vrev = JSON.parse(prev).vrev;
+      }
       await this.ctx.storage.put("s:" + id, JSON.stringify(d));
       g.hasSnap = true;
       g.lastScrape = now;
@@ -395,14 +410,14 @@ export class Hub {
     for (const g of all) {
       if ((g.gone && now - (g.lastCheck || 0) > 7 * 86400_000) || (g.status === "finished" && now - (g.lastScrape || g.addedAt) > 60 * 86400_000 && !this.viewers(g.id))) {
         delete this.games[g.id];
-        await this.ctx.storage.delete("s:" + g.id);
+        await this.ctx.storage.delete(["s:" + g.id, "v:" + g.id]);
       }
     }
     if (force) {
       const oldest = Object.values(this.games).filter((g) => g.status === "finished").sort((a, b) => (a.lastScrape || 0) - (b.lastScrape || 0))[0];
       if (oldest) {
         delete this.games[oldest.id];
-        await this.ctx.storage.delete("s:" + oldest.id);
+        await this.ctx.storage.delete(["s:" + oldest.id, "v:" + oldest.id]);
       }
     }
   }
