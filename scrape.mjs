@@ -12,6 +12,8 @@ const ids = args.filter((a) => /^\d+$/.test(a));
 const opt = (name, def) => (args.find((a) => a.startsWith(`--${name}=`)) ?? `--${name}=${def}`).split("=")[1];
 const outDir = opt("out", "out");
 const watch = Number(opt("watch", "0"));
+const postUrl = opt("post", "");
+const token = process.env.INGEST_TOKEN ?? "";
 if (!ids.length) {
   console.error("Használat: node scrape.mjs <játék-azonosító> [...] [--out=mappa] [--watch=másodperc]");
   process.exit(1);
@@ -42,13 +44,18 @@ async function readPrevious(id) {
   }
 }
 
+async function post(body) {
+  const r = await fetch(postUrl, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`Küldési hiba: ${r.status}`);
+}
+
 async function scrapeOne(browser, id) {
   // 1) játék adatai a nyilvános API-ból (gyors) – ha nem változott a lépésszám, nem kell újra kiolvasni
-  const res = await fetch(`https://18xx.games/api/game/${id}`, { headers: { accept: "application/json" } });
+  const res = await fetch(`https://18xx.games/api/game/${id}`, { headers: { accept: "application/json", "user-agent": "xx18-dashboard/1.0 (+https://github.com/gkwebek-git/18xx-dashboard)" } });
   if (!res.ok) throw new Error(`API hiba: ${res.status}`);
   const g = await res.json();
   const actionCount = Array.isArray(g.actions) ? g.actions.length : 0;
-  const prev = await readPrevious(id);
+  const prev = postUrl ? null : await readPrevious(id);
   if (prev && prev.actionCount === actionCount && prev.status === g.status && prev.players?.length) {
     console.log(`[${id}] nincs új lépés (${actionCount}), kihagyva`);
     return false;
@@ -125,6 +132,7 @@ async function scrapeOne(browser, id) {
       history,
     };
     fs.writeFileSync(path.join(outDir, `${id}.json`), JSON.stringify(out));
+    if (postUrl) await post({ id: String(id), data: out });
     console.log(`[${id}] kész: ${players.map((p) => `${p.name} $${p.value}`).join(", ")}`);
     return true;
   } finally {
@@ -142,6 +150,7 @@ async function runAll() {
       } catch (e) {
         failed = true;
         console.error(`[${id}] hiba:`, e.message);
+        if (postUrl) await post({ id: String(id), error: String(e.message).slice(0, 200) }).catch(() => {});
       }
     }
   } finally {

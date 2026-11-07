@@ -1,0 +1,17 @@
+name = "xx18-live"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[vars]
+GH_REPO = "gkwebek-git/18xx-dashboard"
+GH_WORKFLOW = "scrape.yml"
+GH_REF = "main"
+
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]

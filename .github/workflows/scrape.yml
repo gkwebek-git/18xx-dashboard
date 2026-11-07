@@ -1,0 +1,35 @@
+name: Kiolvasás
+
+# Ezt a Cloudflare-en futó figyelő (worker/) indítja, ha egy játékban új lépés történt.
+# Nincs időzítés: csak akkor fut, ha tényleg van mit kiolvasni.
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "Játék-azonosítók szóközzel elválasztva"
+        required: true
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Adatok kiolvasása és elküldése
+        env:
+          IDS: ${{ inputs.ids }}
+          HUB_URL: ${{ vars.HUB_URL }}
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          if ! [[ "$IDS" =~ ^[0-9]+( [0-9]+)*$ ]]; then echo "Hibás azonosítók"; exit 1; fi
+          node scrape.mjs $IDS --out=out --post="$HUB_URL/api/ingest"

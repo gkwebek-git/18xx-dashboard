@@ -1,3 +1,7 @@
 node_modules
 out
 public/data
+dist
+.wrangler
+worker/node_modules
+worker/.wrangler

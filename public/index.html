@@ -47,6 +47,28 @@
   .panel h2 { margin: 0 0 .8vh; font-size: clamp(11px, 1.8vh, 18px); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
   .canvas { position: relative; flex: 1; min-height: 0; }
   #msg { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; font-size: 3vh; color: var(--muted); text-align: center; padding: 4vw; }
+  #landing { display: none; height: 100vh; overflow: auto; }
+  .lw { max-width: 880px; margin: 0 auto; padding: 6vh 20px 8vh; }
+  .lw h1 { font-size: clamp(26px, 4.5vh, 44px); margin: 0 0 .4em; }
+  .lw h2 { margin: 2em 0 .7em; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .lead { color: var(--muted); font-size: 1.1em; line-height: 1.5; margin: 0 0 1.4em; }
+  #addForm { display: flex; gap: 10px; flex-wrap: wrap; }
+  #addUrl { flex: 1 1 320px; min-width: 0; background: var(--panel); color: var(--text); border: 1px solid var(--panel-b); border-radius: 12px; padding: 14px 16px; font: inherit; font-size: 1.05em; }
+  #addUrl:focus { outline: 2px solid var(--c-liq); }
+  #addBtn { background: var(--c-liq); color: #07121f; border: 0; border-radius: 12px; padding: 14px 22px; font: inherit; font-weight: 700; font-size: 1.05em; cursor: pointer; }
+  #addBtn:disabled { opacity: .6; cursor: default; }
+  .err { color: #ff7b72; min-height: 1.4em; margin-top: .6em; }
+  .muted { color: var(--muted); }
+  .small { font-size: .85em; line-height: 1.5; margin-top: 2.4em; }
+  code { background: var(--panel); border: 1px solid var(--panel-b); padding: .05em .4em; border-radius: 6px; }
+  .glist { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .gcard { display: block; background: var(--panel); border: 1px solid var(--panel-b); border-radius: 14px; padding: 14px 16px; color: var(--text); text-decoration: none; }
+  .gcard:hover { border-color: var(--c-liq); }
+  .gcard .gt { display: flex; align-items: center; gap: .5em; font-size: 1.05em; }
+  .gcard .gt .muted { margin-left: auto; font-size: .8em; }
+  .gcard .gd { color: var(--muted); font-size: .9em; margin-top: .2em; min-height: 1.2em; }
+  .gcard .gp { margin-top: .5em; font-weight: 600; }
+  .gcard .gs { margin-top: .3em; font-size: .85em; }
   @media (max-width: 900px) { .cards { grid-template-columns: repeat(2, 1fr); } .charts { grid-template-columns: 1fr; overflow: auto; } body { overflow: auto; } .wrap { height: auto; } .canvas { height: 38vh; flex: none; } }
 </style>
 </head>
@@ -67,19 +89,30 @@
   </section>
 </div>
 <div id="msg"></div>
+<main id="landing">
+  <div class="lw">
+    <h1>18xx élő dashboard</h1>
+    <p class="lead">Illeszd be egy <b>18xx.games</b> játék linkjét, és kapsz egy élő táblát: vagyon, készpénz, részvények, a körök alakulása. Amint valaki lép a játékban, a tábla magától frissül, nem kell újratölteni.</p>
+    <form id="addForm" autocomplete="off">
+      <input id="addUrl" type="text" inputmode="url" placeholder="https://18xx.games/game/272021" aria-label="Játék linkje">
+      <button id="addBtn" type="submit">Követés indítása</button>
+    </form>
+    <div id="addErr" class="err"></div>
+    <h2>Követett játékok</h2>
+    <div id="gameList" class="glist"><p class="muted">Betöltés…</p></div>
+    <p class="muted small">Streameléshez (OBS): a játék oldalának címéhez fűzd hozzá: <code>&amp;bg=transparent</code> (átlátszó háttér) vagy <code>&amp;theme=light</code> (világos téma).<br>
+    Az oldal kíméli az 18xx.games-t: csak akkor kér le adatot, ha tényleg történt lépés, és legfeljebb tíz másodpercenként egyet.</p>
+  </div>
+</main>
 <script src="chart.umd.js"></script>
 <script>
 (() => {
-  // ---- beállítások (URL-ből): ?game=272021&theme=light&bg=transparent&refresh=30&src=... ----
-  const DEFAULT_GAME = "272021";
-  const DATA_REPO = "gkwebek-git/18xx-dashboard"; // innen jönnek az adatok (data ág)
+  // ---- beállítások (URL-ből): ?game=272021&theme=light&bg=transparent&hub=... ----
   const q = new URLSearchParams(location.search);
-  const game = (q.get("game") || DEFAULT_GAME).replace(/\D/g, "");
-  const refresh = Math.max(10, Number(q.get("refresh")) || 30) * 1000;
+  const HUB = (q.get("hub") || "https://xx18-live.szilagyijanoswork2.workers.dev").replace(/\/+$/, "");
+  const game = (q.get("game") || "").replace(/\D/g, "");
   if (q.get("theme") === "light") document.body.classList.add("light");
   if (q.get("bg") === "transparent") document.body.classList.add("transparent");
-  const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-  const src = q.get("src") || (isLocal ? `data/${game}.json` : `https://raw.githubusercontent.com/${DATA_REPO}/data/${game}.json`);
 
   const PALETTE = ["#ff7b72", "#58a6ff", "#3fb950", "#d29922", "#bc8cff", "#39c5cf"];
   const css = (v) => getComputedStyle(document.body).getPropertyValue(v).trim();
@@ -180,26 +213,104 @@
     charts.c3.update();
   }
 
-  async function tick() {
-    try {
-      const r = await fetch(`${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" });
-      if (!r.ok) throw new Error(r.status);
-      const text = await r.text();
-      $("msg").style.display = "none";
-      $("wrap").style.visibility = "visible";
-      if (text !== last) { last = text; render(JSON.parse(text)); }
-    } catch (e) {
-      if (!last) {
-        $("wrap").style.visibility = "hidden";
-        $("msg").style.display = "flex";
-        $("msg").textContent = `Még nincs adat a(z) ${game} játékhoz. (A feed percenként frissül, nézz vissza kicsit később.)`;
-      } else {
-        $("live").innerHTML = `<i class="dot off"></i><b>Nincs kapcsolat</b>`;
-      }
-    }
+  // ---------- élő kapcsolat ----------
+  let snap = null;          // utolsó kapott adat
+  let state = "connecting"; // connecting | live | updating | offline | error
+  let ws = null, retry = 0, wsTimer = null;
+
+  function showMsg(text) {
+    $("wrap").style.visibility = "hidden";
+    $("msg").style.display = "flex";
+    $("msg").textContent = text;
   }
-  tick();
-  setInterval(tick, refresh);
+
+  function paintLive() {
+    if (!snap) return;
+    const fin = snap.status === "finished";
+    const label = { live: fin ? "Befejezett játék" : "Élő játék", updating: "Új lépés – frissítés…", offline: "Újracsatlakozás…", error: "Frissítési hiba – újrapróbáljuk", connecting: "Csatlakozás…" }[state];
+    const cls = state === "offline" || state === "error" ? "off" : state === "updating" ? "" : fin ? "done" : "";
+    const t = snap.fresh ? new Date(snap.fresh).toLocaleTimeString("hu-HU", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "";
+    $("live").innerHTML = `<i class="dot ${cls}"></i><b>${label}</b>${t ? " · frissítve: " + t : ""}`;
+  }
+
+  function onSnapshot(d) {
+    snap = d;
+    state = "live";
+    $("msg").style.display = "none";
+    $("wrap").style.visibility = "visible";
+    render(d);
+    paintLive();
+  }
+
+  function connect() {
+    clearTimeout(wsTimer);
+    ws = new WebSocket(HUB.replace(/^http/, "ws") + "/api/ws/" + game);
+    ws.onopen = () => { retry = 0; if (!snap) state = "connecting"; };
+    ws.onmessage = (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m.type === "snapshot") onSnapshot(m.data);
+      else if (m.type === "status") {
+        if (!snap) { showMsg(m.state === "pending" || m.state === "updating" ? "Az első adatok készülnek… (általában 1–2 perc)" : "Hiba az adatok kiolvasásakor, újrapróbáljuk."); return; }
+        state = m.state; paintLive();
+      }
+    };
+    ws.onclose = () => {
+      if (snap) { state = "offline"; paintLive(); }
+      retry = Math.min(retry + 1, 6);
+      wsTimer = setTimeout(connect, 1000 * 2 ** retry);
+    };
+    ws.onerror = () => { try { ws.close(); } catch {} };
+  }
+  // tartja életben a kapcsolatot (a szerver "pong"-gal válaszol, ez nem terheli)
+  setInterval(() => { if (ws && ws.readyState === 1) ws.send("ping"); }, 25000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && (!ws || ws.readyState > 1)) connect(); });
+
+  async function startLive() {
+    // első kép gyorsan, hogy ne kelljen várni a websocketre
+    try {
+      const r = await fetch(`${HUB}/api/game/${game}`, { cache: "no-store" });
+      if (r.status === 404) return showMsg("Ezt a játékot még nem követjük. Add hozzá a főoldalon.");
+      if (r.status === 200) onSnapshot(await r.json());
+      else showMsg("Az első adatok készülnek… (általában 1–2 perc)");
+    } catch { showMsg("Nem érem el a szervert. Próbáld újra később."); }
+    connect();
+  }
+
+  // ---------- főoldal: játék hozzáadása ----------
+  function startLanding() {
+    $("wrap").style.display = "none";
+    const L = $("landing");
+    L.style.display = "block";
+    document.title = "18xx élő dashboard";
+    const extra = ["theme", "bg"].filter((k) => q.get(k)).map((k) => `&${k}=${encodeURIComponent(q.get(k))}`).join("");
+    const go = (id) => { location.href = `?game=${id}${extra}`; };
+    $("addForm").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const err = $("addErr"), btn = $("addBtn");
+      err.textContent = "";
+      const url = $("addUrl").value.trim();
+      if (!url) return;
+      btn.disabled = true; btn.textContent = "Ellenőrzés…";
+      try {
+        const r = await fetch(`${HUB}/api/track`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url }) });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || "Hiba");
+        go(j.id);
+      } catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = "Követés indítása"; }
+    });
+    fetch(`${HUB}/api/games`, { cache: "no-store" }).then((r) => r.json()).then(({ games }) => {
+      const box = $("gameList");
+      if (!games.length) { box.innerHTML = `<p class="muted">Még nincs követett játék.</p>`; return; }
+      box.innerHTML = games.map((g) => `<a class="gcard" href="?game=${g.id}${extra}">
+        <div class="gt"><i class="dot ${g.status === "finished" ? "done" : ""}"></i><b>${esc(g.title || "18xx")}</b><span class="muted">#${g.id}</span></div>
+        <div class="gd">${esc(g.description || "")}</div>
+        <div class="gp">${(g.players || []).map(esc).join(" · ")}</div>
+        <div class="gs muted">${g.status === "finished" ? "Befejezett" : esc(g.round || "Folyamatban")}${g.turn ? " · " + g.turn + ". forduló" : ""}${g.hasSnap ? "" : " · még készül"}</div>
+      </a>`).join("");
+    }).catch(() => { $("gameList").innerHTML = `<p class="muted">A lista most nem tölthető be.</p>`; });
+  }
+
+  if (game) startLive(); else startLanding();
 })();
 </script>
 </body>
