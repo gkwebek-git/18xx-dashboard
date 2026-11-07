@@ -119,11 +119,11 @@
 
   /* tőzsde */
   #marketPanel { grid-column: 1 / 3; grid-row: 3; padding: 8px 12px; position: relative; }
-  #marketBox { position: absolute; left: 12px; top: 28px; transform-origin: 0 0; }
-  #marketBox .mrow { display: flex; width: max-content; }
-  #marketBox .mc { box-sizing: border-box !important; width: 25px; height: 74px; padding: 3px 0 !important; border: 1px solid rgba(0,0,0,.25); text-align: center; flex: none; overflow: hidden; }
-  #marketBox .mc > div:first-child { font-size: 11px !important; font-weight: 700; letter-spacing: -.3px; }
-  #marketBox .mc img { width: 21px !important; height: 21px !important; margin: 1px 0 0 1px; display: block; }
+  #marketBox { position: absolute; left: 12px; right: 12px; top: 28px; bottom: 8px; }
+  #marketBox .mrow { display: flex; width: 100%; height: 100%; }
+  #marketBox .mc { box-sizing: border-box !important; flex: 1 1 0; min-width: 0; height: 100%; padding: 3px 0 !important; border: 1px solid rgba(0,0,0,.25); text-align: center; overflow: hidden; }
+  #marketBox .mc > div:first-child { font-size: 11.5px !important; font-weight: 700; letter-spacing: -.3px; }
+  #marketBox .mc img { width: 82% !important; max-width: 30px; height: auto !important; aspect-ratio: 1; margin: 2px auto 0; display: block; }
   #marketPanel .bank { position: absolute; right: 14px; top: 8px; font-size: 13px; color: var(--mut); }
   #marketPanel .bank b { color: var(--txt); }
 
@@ -177,8 +177,13 @@
 
   // ---------- 1920×1080-as vászon, bármekkora monitorra illesztve ----------
   const stage = $("stage");
+  let MAINH = 850, mapAspect = 0;
+  function applyMapW() { if (mapAspect) stage.style.setProperty("--mapw", Math.min(Math.round(MAINH * mapAspect) + 4, Math.round(stage.offsetWidth * 0.78)) + "px"); }
   function fit() {
     const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    const W = Math.round(innerWidth / s), H = Math.round(innerHeight / s); // a vászon kitölti a teljes képernyőt, bármilyen az arány
+    stage.style.width = W + "px"; stage.style.height = H + "px";
+    MAINH = H - 230; applyMapW();
     stage.style.transform = `translate(-50%, -50%) scale(${s})`;
   }
   addEventListener("resize", fit); fit();
@@ -299,7 +304,7 @@
     const svg = inl(view.map).replace(/<svg id="map"[^>]*width="([\d.]+)"[^>]*height="([\d.]+)"[^>]*>/, (m, w, h) => `<svg id="map" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">`);
     $("mapBox").innerHTML = svg;
     const m = view.map.match(/<svg id="map"[^>]*width="([\d.]+)"[^>]*height="([\d.]+)"/);
-    if (m) $("stage").style.setProperty("--mapw", Math.min(1420, Math.round(850 * m[1] / m[2]) + 4) + "px");
+    if (m) { mapAspect = m[1] / m[2]; applyMapW(); }
   }
   function renderMarket() {
     if (!view || !view.market) return;
@@ -309,10 +314,6 @@
     const tmp = document.createElement("div"); tmp.innerHTML = inl(view.market);
     const cells = [...tmp.querySelectorAll("div")].filter((d) => d.style.display === "inline-block" && d.style.position === "relative");
     box.innerHTML = cells.length ? `<div class="mrow">${cells.map((c) => `<div class="mc" style="background-color:${c.style.backgroundColor};color:${c.style.color}">${c.innerHTML}</div>`).join("")}</div>` : inl(view.market);
-    const avail = $("marketPanel").clientWidth - 24, availH = $("marketPanel").clientHeight - 38;
-    const w = box.scrollWidth || box.firstElementChild?.scrollWidth || 1, h = box.scrollHeight || 1;
-    const k = Math.min(avail / w, availH / h, 1.15);
-    box.style.transform = `scale(${k})`;
   }
 
   // ---------- diagram ----------
