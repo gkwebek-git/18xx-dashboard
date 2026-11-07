@@ -71,7 +71,7 @@
 
   /* jobb oszlop */
   #side { grid-column: 2; grid-row: 2; display: grid; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; min-width: 0; }
-  #players { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+  #players { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
   .pl { background: var(--panel); border: 1px solid var(--line); border-left: 7px solid var(--pc); border-radius: 14px; padding: 8px 14px 8px 12px; min-width: 0; position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 16px; align-items: center; }
   .pl.act { border-color: var(--pc); box-shadow: 0 0 0 1px var(--pc), 0 0 26px -4px var(--pc); }
   .pl .nm { display: flex; align-items: baseline; gap: 8px; font-weight: 700; font-size: 21px; min-width: 0; }
@@ -112,11 +112,15 @@
   .cbtn button:hover { border-color: var(--acc); }
   .cbtn button.go { background: rgba(63, 185, 80, .18); border-color: rgba(63, 185, 80, .6); }
   .cbtn button.stop { background: rgba(242, 180, 90, .16); border-color: rgba(242, 180, 90, .6); color: var(--acc); }
+  .ck.tot { border-top: 1px solid var(--line); border-radius: 0; margin-top: 1px; padding-top: 2px; }
+  .ck.tot i { background: none; }
+  .ck.tot span { color: var(--mut); text-transform: uppercase; font-size: 12px; letter-spacing: .08em; }
+  .ck.tot b { color: var(--acc); }
   .ck.off.run { background: none; border-color: var(--line); }
   .ck.off.run i { animation: none; }  .ck { display: flex; align-items: center; gap: 9px; padding: 0 8px; line-height: 1.15; border-radius: 9px; border: 1px solid transparent; min-width: 0; }
   .ck i { width: 10px; height: 10px; border-radius: 50%; background: var(--pc); flex: none; }
   .ck span { flex: 1; font-weight: 650; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ck b { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .3px; color: var(--mut); }
+  .ck b { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .3px; color: var(--mut); }
   .ck.run { background: color-mix(in srgb, var(--pc) 16%, transparent); border-color: var(--pc); }
   .ck.run b { color: var(--txt); }
   .ck.run i { animation: pulse2 1s infinite; }
@@ -124,8 +128,8 @@
   #chartBox h2, #trainBox h2, #marketPanel h2 { margin: 0 0 4px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
   #chartBox .cv { position: relative; flex: 1; min-height: 0; }
   #trainBox { padding: 8px 12px; }
-  #trainBox table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
-  #trainBox td { padding: 0; line-height: 19px; }
+  #trainBox table { width: 100%; border-collapse: collapse; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+  #trainBox td { padding: 0; line-height: 16.5px; }
   #trainBox td.t { font-weight: 800; width: 44px; }
   #trainBox td.p { color: var(--mut); }
   #trainBox td.n { text-align: right; font-weight: 700; }
@@ -399,12 +403,16 @@
       el.innerHTML = (snap.players || []).map((p, i) => {
         const on = (c.acting || []).includes(p.name);
         return `<div class="ck ${on ? "run" : ""} ${running ? "" : "off"}" style="--pc:${PALETTE[i % PALETTE.length]}"><i></i><span>${esc(p.name)}</span><b></b></div>`;
-      }).join("");
+      }).join("") + `<div class="ck tot"><i></i><span>Összidő</span><b></b></div>`;
     }
-    [...el.querySelectorAll(".ck b")].forEach((b, i) => {
+    let sum = 0;
+    [...el.querySelectorAll(".ck:not(.tot) b")].forEach((b, i) => {
       const p = snap.players[i];
-      b.textContent = fmtT((c.ms && c.ms[p.name] || 0) + ((c.acting || []).includes(p.name) ? run : 0));
+      const v = (c.ms && c.ms[p.name] || 0) + ((c.acting || []).includes(p.name) ? run : 0);
+      sum += v;
+      b.textContent = fmtT(v);
     });
+    const tb = el.querySelector(".ck.tot b"); if (tb) tb.textContent = fmtT(sum);
   }
   async function clockCtl(action) {
     try {
