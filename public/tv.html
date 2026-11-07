@@ -77,6 +77,9 @@
   .pl .nm { display: flex; align-items: baseline; gap: 8px; font-weight: 700; font-size: 21px; min-width: 0; }
   .pl .nm span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pl .rk { color: var(--mut); font-size: 14px; font-weight: 600; }
+  .pl .pt { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--mut); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; white-space: nowrap; }
+  .pl .pt b { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--txt); }
+  .pl .pt.run { color: var(--acc); border-color: rgba(242, 180, 90, .6); background: rgba(242, 180, 90, .1); }
   .pl .cash { text-align: right; line-height: 1; }
   .pl .cash small { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); margin-bottom: 3px; }
   .pl .cash b { font-size: 38px; font-weight: 800; color: var(--pc); font-variant-numeric: tabular-nums; }
@@ -263,10 +266,11 @@
       const hold = (v ? v.holdings : []).map((h) => `<i title="${esc(h.sym.replace("*", ""))}"><img src="${logoUrl(h.logo)}" alt="">${esc(h.pct.replace("%", ""))}</i>`).join("");
       return `<div class="pl ${acting.has(p.name) ? "act" : ""}" style="--pc:${pc}">
         ${acting.has(p.name) ? '<span class="turn">LÉP</span>' : ""}${v && v.priority ? '<span class="pd">Priority</span>' : ""}
-        <div class="c1"><div class="nm"><span>${esc(p.name)}</span><span class="rk">#${rank.get(i)}</span></div><div class="hold">${hold}</div></div>
+        <div class="c1"><div class="nm"><span>${esc(p.name)}</span><span class="rk">#${rank.get(i)}</span><span class="pt" data-p="${esc(p.name)}">⏱ <b>0:00:00</b></span></div><div class="hold">${hold}</div></div>
         <div class="cash"><small>Készpénz</small><b>${money(p.cash)}</b></div>
         <div class="st"><span>Érték</span><b>${money(p.value)}</b><span>Likv.</span><b>${money(p.liquidity)}</b><span>Részvény</span><b>${p.shares}</b><span>Cert</span><b>${p.certs}/${snap.certLimit || "?"}</b></div>
       </div>`;    }).join("");
+    renderClock();
   }
 
   // ---------- cégek ----------
@@ -413,6 +417,12 @@
       b.textContent = fmtT(v);
     });
     const tb = el.querySelector(".ck.tot b"); if (tb) tb.textContent = fmtT(sum);
+    // ugyanez a játékosok kártyáin
+    document.querySelectorAll("#players .pt").forEach((x) => {
+      const n = x.dataset.p, on = running && (c.acting || []).includes(n);
+      x.querySelector("b").textContent = fmtT((c.ms && c.ms[n] || 0) + (on ? run : 0));
+      x.classList.toggle("run", on);
+    });
   }
   async function clockCtl(action) {
     try {
@@ -423,7 +433,7 @@
   }
   $("ckGo").addEventListener("click", () => clockCtl(snap && snap.clock && snap.clock.running ? "pause" : "start"));
   $("ckReset").addEventListener("click", () => { if (confirm("Nullázod az összes játékos óráját?")) clockCtl("reset"); });  setInterval(renderClock, 1000);
-  function renderAll() { renderClock(); renderIpo(); renderTop(); renderPlayers(); renderTrains(); renderMap(); renderMarket(); renderChart(); }
+  function renderAll() { renderIpo(); renderTop(); renderPlayers(); renderTrains(); renderMap(); renderMarket(); renderChart(); }
 
   function onSnapshot(d) {
     snap = d; state = "live"; hideMsg();
