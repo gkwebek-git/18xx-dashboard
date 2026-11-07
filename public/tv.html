@@ -26,9 +26,9 @@
   .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
   .hex { width: 46px; height: 46px; flex: none; }
   .brand h1 { margin: 0; font-size: 30px; line-height: 1; letter-spacing: .2px; white-space: nowrap; }
-  .brand small { display: block; color: var(--mut); font-size: 15px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+  .brand small { display: block; color: var(--mut); font-size: 15px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
   .chips { display: flex; gap: 10px; align-items: center; flex: 1; min-width: 0; overflow: hidden; }
-  .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; font-size: 17px; color: var(--mut); white-space: nowrap; }
+  .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; font-size: 15px; color: var(--mut); white-space: nowrap; }
   .chip b { color: var(--txt); font-weight: 650; }
   .chip.warn { border-color: rgba(242, 180, 90, .55); color: var(--acc); background: rgba(242, 180, 90, .08); }
   .chip.step { color: var(--txt); border-color: rgba(88, 166, 255, .5); background: rgba(88, 166, 255, .08); }
@@ -39,6 +39,21 @@
   .dot.done { background: var(--mut); animation: none; }
   @keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(63, 185, 80, 0); } 100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); } }
   @keyframes pulse2 { 50% { opacity: .3; } }
+  .bankTop { display: flex; gap: 20px; flex: none; }
+  .bankTop div { text-align: right; line-height: 1.1; }
+  .bankTop small { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); margin-bottom: 3px; white-space: nowrap; }
+  .bankTop b { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  #ipo { position: absolute; left: 14px; bottom: 14px; background: rgba(15, 21, 30, .92); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px 8px; font-variant-numeric: tabular-nums; z-index: 3; }
+  #ipo:empty { display: none; }
+  #ipo h3 { margin: 0 0 4px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 700; text-align: center; }
+  #ipo .g { display: flex; gap: 14px; }
+  #ipo .g div { display: flex; flex-direction: column; font-size: 14px; line-height: 17px; font-weight: 600; text-align: right; }
+  #ipo .g div:nth-child(2) { border-left: 1px solid var(--line); padding-left: 12px; }
+  #intr { margin-top: auto; border-top: 1px solid var(--line); padding-top: 5px; font-size: 13px; color: var(--mut); }
+  #intr div { display: flex; justify-content: space-between; gap: 10px; line-height: 17px; }
+  #intr b { color: var(--txt); font-weight: 800; }
+  #trainBox { display: flex; flex-direction: column; }
+  #trains { min-height: 0; overflow: hidden; }
   .live small { color: var(--mut); font-size: 14px; display: block; }
 
   /* térkép */
@@ -52,7 +67,7 @@
   svg text.number { font-size: 21px; font-weight: 300; }
 
   /* jobb oszlop */
-  #side { grid-column: 2; grid-row: 2; display: grid; grid-template-rows: auto 1fr 150px; gap: 12px; min-height: 0; min-width: 0; }
+  #side { grid-column: 2; grid-row: 2; display: grid; grid-template-rows: auto 1fr 172px; gap: 12px; min-height: 0; min-width: 0; }
   #players { display: grid; gap: 10px; grid-template-columns: repeat(var(--n, 4), 1fr); }
   .pl { background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--pc); border-radius: 14px; padding: 8px 12px 7px; min-width: 0; position: relative; }
   .pl.act { border-color: var(--pc); box-shadow: 0 0 0 1px var(--pc), 0 0 26px -4px var(--pc); }
@@ -88,8 +103,8 @@
   #chartBox h2, #trainBox h2, #marketPanel h2 { margin: 0 0 4px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
   #chartBox .cv { position: relative; flex: 1; min-height: 0; }
   #trainBox { padding: 8px 12px; }
-  #trainBox table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-  #trainBox td { padding: 0; line-height: 15px; }
+  #trainBox table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  #trainBox td { padding: 0; line-height: 14px; }
   #trainBox td.t { font-weight: 800; width: 34px; }
   #trainBox td.p { color: var(--mut); }
   #trainBox td.n { text-align: right; font-weight: 700; }
@@ -118,17 +133,18 @@
       <div><h1 id="title">18xx</h1><small id="desc"></small></div>
     </div>
     <div class="chips" id="chips"></div>
+    <div class="bankTop" id="bankTop"></div>
     <div class="live" id="live"></div>
   </header>
 
-  <section class="panel" id="mapPanel"><div id="mapBox" style="width:100%;height:100%"></div></section>
+  <section class="panel" id="mapPanel"><div id="mapBox" style="width:100%;height:100%"></div><div id="ipo"></div></section>
 
   <aside id="side">
     <div id="players"></div>
     <div id="corps"></div>
     <div id="bottom">
       <div class="panel" id="chartBox"><h2>Vagyon alakulása a körök során</h2><div class="cv"><canvas id="c2"></canvas></div></div>
-      <div class="panel" id="trainBox"><h2>Vonatok</h2><div id="trains"></div></div>
+      <div class="panel" id="trainBox"><h2>Vonatok</h2><div id="trains"></div><div id="intr"></div></div>
     </div>
   </aside>
 
@@ -244,6 +260,13 @@
     }).join("");
   }
 
+  // IPO Bid Chart (18USA) – nincs benne az oldal adataiban, a játék szabálylapjáról van átvéve
+  const IPO = [[100, 106, 112, 118, 124, 132, 140, 148, 156, 164, 172, 180, 190, 200], [210, 220, 230, 240, 254, 270, 284, 300, 314, 330, 344, 360, 380, 400]];
+  function renderIpo() {
+    const el = $("ipo");
+    if (!snap || !/18\s?USA/i.test(snap.title || "")) { el.innerHTML = ""; return; }
+    el.innerHTML = `<h3>IPO Bid Chart</h3><div class="g">${IPO.map((c) => `<div>${c.map((v) => `<span>$${v}</span>`).join("")}</div>`).join("")}</div>`;
+  }
   // ---------- vonatok, bank ----------
   function renderTrains() {
     const el = $("trains");
@@ -256,7 +279,13 @@
     }).join("");
     el.innerHTML = `<table>${rows}</table>${view.pool ? `<div class="pool">${esc(view.pool)}</div>` : ""}`;
     const bank = (view.bank || []).reduce((o, r) => ((o[r[0]] = r[1]), o), {});
-    $("bank").innerHTML = `Hitel <b>${esc(bank["Loans"] || "–")}</b> · kamat <b>${esc(bank["Interest per Loan"] || "–")}</b> → <b>${esc(bank["Future Interest per Loan"] || "–")}</b> · el nem indult cég <b>${esc(bank["Unstarted corporations"] || "–")}</b>`;
+    const B = (k) => esc(bank[k] || "–");
+    const bt = (l, v) => `<div><small>${l}</small><b>${v}</b></div>`;
+    $("bankTop").innerHTML = bt("Kamat / hitel", B("Interest per Loan")) + bt("Jövőbeli kamat", B("Future Interest per Loan")) + bt("Hitelek", B("Loans")) + bt("Hitel értéke", B("Loan Value")) + bt("El nem indult cég", B("Unstarted corporations"));
+    const ik = Object.keys(bank);
+    const ir = ik.find((k) => /repaid/i.test(k)), it = ik.find((k) => /more loans taken/i.test(k));
+    $("intr").innerHTML = (ir ? `<div><span>Kamat, ha még 2 hitelt visszafizetnek</span><b>${esc(bank[ir])}</b></div>` : "") + (it ? `<div><span>Kamat, ha még 4 hitelt felvesznek</span><b>${esc(bank[it])}</b></div>` : "");
+    $("bank").innerHTML = "";
   }
 
   // ---------- térkép és tőzsde ----------
@@ -306,7 +335,7 @@
       renderAll();
     } catch {}
   }
-  function renderAll() { renderTop(); renderPlayers(); renderCorps(); renderTrains(); renderMap(); renderMarket(); renderChart(); }
+  function renderAll() { renderIpo(); renderTop(); renderPlayers(); renderCorps(); renderTrains(); renderMap(); renderMarket(); renderChart(); }
 
   function onSnapshot(d) {
     snap = d; state = "live"; hideMsg();
