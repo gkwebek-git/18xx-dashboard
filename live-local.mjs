@@ -8,6 +8,7 @@ import puppeteer from "puppeteer-core";
 import fs from "node:fs";
 import path from "node:path";
 import { collect } from "./collect.mjs";
+import { advanceClock } from "./clock.mjs";
 
 process.env.TAB_SLEEP ??= "100";
 const args = process.argv.slice(2);
@@ -76,8 +77,13 @@ async function refresh(reason) {
       const { out, view, players } = await collect(page, id, gp);
       const rev = Date.now();
       out.vrev = rev;
-      if (postUrl) await post({ id, data: out, view, live: true });
+      if (postUrl) await post({ id, data: out, view, live: true }); // az órát a hub vezeti
       else {
+        // helyi mód: az óra állapota egy fájlban él, hogy újraindítás után se vesszen el
+        const cf = path.join(outDir, `${id}.clock.json`);
+        let prevClock = null; try { prevClock = JSON.parse(fs.readFileSync(cf, "utf8")); } catch {}
+        out.clock = advanceClock(prevClock, out.acting || [], (out.updatedAt || 0) * 1000 || Date.now());
+        fs.writeFileSync(cf, JSON.stringify(out.clock));
         if (view) writeAtomic(`${id}.view.json`, view);
         writeAtomic(`${id}.json`, out);
       }

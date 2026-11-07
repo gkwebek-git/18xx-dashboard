@@ -46,6 +46,20 @@ export default {
   },
 };
 
+// Játékidő-óra: mindenki összesített "soron lévő" ideje. A határokat a játék saját időbélyege adja (az utolsó lépés ideje),
+// így akkor is pontos, ha a figyelő későn veszi észre a lépést. Hosszú tétlenséget (éjszaka) nem számolunk tovább a korlátnál.
+const CLOCK_CAP = 30 * 60_000;
+function advanceClock(c, acting, ts) {
+  if (!c || typeof c !== "object") c = { ms: {}, since: ts, acting: [] };
+  if (ts > c.since) {
+    const gap = Math.min(ts - c.since, CLOCK_CAP);
+    for (const n of c.acting || []) c.ms[n] = (c.ms[n] || 0) + gap;
+    c.since = ts;
+  }
+  c.acting = [...acting];
+  return c;
+}
+
 function parseGameId(input) {
   const s = String(input ?? "").trim();
   let m = /18xx\.games\/game\/(\d{1,9})/i.exec(s) || /^\s*#?(\d{1,9})\s*$/.exec(s);
@@ -430,6 +444,8 @@ export class Hub {
       this.broadcast(id, { type: "status", state: "error" });
     } else {
       const d = { ...body.data, fresh: now };
+      g.clock = advanceClock(g.clock, Array.isArray(d.acting) ? d.acting : [], (d.updatedAt || 0) * 1000 || now);
+      d.clock = g.clock;
       if (body.view && typeof body.view === "object") {
         d.vrev = now;
         await this.ctx.storage.put("v:" + id, JSON.stringify(body.view));

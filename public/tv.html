@@ -103,7 +103,17 @@
   .co .r3 em { font-style: normal; color: var(--acc); font-weight: 700; }
 
   #bottom { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; }
-  #trainBox { grid-column: 1; grid-row: 1; } #bankBox { grid-column: 2; grid-row: 1; } #chartBox { grid-column: 1 / 3; grid-row: 2; }
+  #trainBox { grid-column: 1; grid-row: 1; } #bankBox { grid-column: 2; grid-row: 1; } #chartBox { grid-column: 1; grid-row: 2; } #clockBox { grid-column: 2; grid-row: 2; }
+  #clockBox { padding: 7px 12px 5px; display: flex; flex-direction: column; min-height: 0; }
+  #clockBox h2 { margin: 0 0 3px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
+  #clock { flex: 1; display: flex; flex-direction: column; justify-content: space-around; min-height: 0; }
+  .ck { display: flex; align-items: center; gap: 9px; padding: 0 8px; line-height: 1.15; border-radius: 9px; border: 1px solid transparent; min-width: 0; }
+  .ck i { width: 10px; height: 10px; border-radius: 50%; background: var(--pc); flex: none; }
+  .ck span { flex: 1; font-weight: 650; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ck b { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .3px; color: var(--mut); }
+  .ck.run { background: color-mix(in srgb, var(--pc) 16%, transparent); border-color: var(--pc); }
+  .ck.run b { color: var(--txt); }
+  .ck.run i { animation: pulse2 1s infinite; }
   #chartBox { padding: 8px 12px 6px; display: flex; flex-direction: column; }
   #chartBox h2, #trainBox h2, #marketPanel h2 { margin: 0 0 4px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
   #chartBox .cv { position: relative; flex: 1; min-height: 0; }
@@ -150,6 +160,7 @@
     <div id="bottom">
       <div class="panel" id="chartBox"><h2>Vagyon alakulása a körök során</h2><div class="cv"><canvas id="c2"></canvas></div></div>
       <div class="panel" id="trainBox"><h2>Vonatok</h2><div id="trains"></div></div>
+      <div class="panel" id="clockBox"><h2>Játékidő</h2><div id="clock"></div></div>
       <div class="panel" id="bankBox"><h2>Bank és hitelek</h2><div id="intr"></div></div>
     </div>
   </aside>
@@ -343,12 +354,29 @@
       renderAll();
     } catch {}
   }
-  function renderAll() { renderIpo(); renderTop(); renderPlayers(); renderTrains(); renderMap(); renderMarket(); renderChart(); }
+  // ---------- játékidő-óra ----------
+  const CLOCK_CAP = 30 * 60_000;
+  const fmtT = (ms) => { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return `${h}:${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}`; };
+  function renderClock() {
+    const el = $("clock");
+    if (!snap) return;
+    const c = snap.clock || { ms: {}, since: Date.now(), acting: [] };
+    const run = Math.min(Math.max(Date.now() - c.since, 0), CLOCK_CAP);
+    const html = (snap.players || []).map((p, i) => {
+      const on = (c.acting || []).includes(p.name);
+      const ms = (c.ms && c.ms[p.name] || 0) + (on ? run : 0);
+      return `<div class="ck ${on ? "run" : ""}" style="--pc:${PALETTE[i % PALETTE.length]}"><i></i><span>${esc(p.name)}</span><b>${fmtT(ms)}</b></div>`;
+    }).join("");
+    if (el.dataset.h !== html.replace(/<b>[^<]*<\/b>/g, "")) { el.innerHTML = html; el.dataset.h = html.replace(/<b>[^<]*<\/b>/g, ""); }
+    else [...el.querySelectorAll(".ck b")].forEach((b, i) => { const p = snap.players[i]; const on = (c.acting || []).includes(p.name); b.textContent = fmtT((c.ms && c.ms[p.name] || 0) + (on ? run : 0)); });
+  }
+  setInterval(renderClock, 1000);
+  function renderAll() { renderClock(); renderIpo(); renderTop(); renderPlayers(); renderTrains(); renderMap(); renderMarket(); renderChart(); }
 
   function onSnapshot(d) {
     snap = d; state = "live"; hideMsg();
     if (d.vrev && d.vrev !== viewRev) loadView(d.vrev); else if (!d.vrev && LOCAL && !view) loadView(1);
-    renderTop(); renderPlayers(); renderChart();
+    renderTop(); renderPlayers(); renderChart(); renderClock();
   }
 
   let ws = null, retry = 0, timer = null;
