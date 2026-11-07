@@ -8,6 +8,7 @@ import path from "node:path";
 import readline from "node:readline/promises";
 import { spawn, exec } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { controlClock, newClock } from "./clock.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, "public");
@@ -26,6 +27,26 @@ if (!id) { console.error("Nem találok játékazonosítót a megadott szövegben
 // ---- szerver a public mappához ----
 const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".json": "application/json", ".css": "text/css", ".svg": "image/svg+xml" };
 const server = http.createServer((req, res) => {
+  // játékidő-óra gombjai (Start / Szünet / Nullázás) – az óra állapota egy fájlban él
+  if (req.method === "POST" && new URL(req.url, "http://x").pathname === "/api/clock") {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      try {
+        const action = JSON.parse(body).action;
+        if (!["start", "pause", "reset"].includes(action)) throw new Error("ismeretlen művelet");
+        const cf = path.join(dataDir, `${id}.clock.json`);
+        let c = null; try { c = JSON.parse(fs.readFileSync(cf, "utf8")); } catch {}
+        c = controlClock(c || newClock(), action);
+        fs.mkdirSync(dataDir, { recursive: true });
+        fs.writeFileSync(cf, JSON.stringify(c));
+        const sf = path.join(dataDir, `${id}.json`);
+        try { const s = JSON.parse(fs.readFileSync(sf, "utf8")); s.clock = c; fs.writeFileSync(sf, JSON.stringify(s)); } catch {}
+        res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true, clock: c }));
+      } catch (e) { res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ error: String(e.message) })); }
+    });
+    return;
+  }
   let p = decodeURIComponent(new URL(req.url, "http://x").pathname);
   if (p.endsWith("/")) p += "index.html";
   if (p === "/tv") p = "/tv.html";
@@ -51,6 +72,6 @@ const wait = setInterval(() => {
   if (fs.existsSync(path.join(dataDir, `${id}.view.json`)) || Date.now() - t0 > 120000) {
     clearInterval(wait);
     console.log(`Megnyitás: ${url}\nLeállítás: Ctrl+C`);
-    exec(`start "" "${url}"`);
+    if (!process.env.NO_OPEN) exec(`start "" "${url}"`);
   }
 }, 1000);

@@ -46,12 +46,14 @@ export default {
   },
 };
 
-// Játékidő-óra: mindenki összesített "soron lévő" ideje. A határokat a játék saját időbélyege adja (az utolsó lépés ideje),
-// így akkor is pontos, ha a figyelő későn veszi észre a lépést. Hosszú tétlenséget (éjszaka) nem számolunk tovább a korlátnál.
+// Játékidő-óra: mindenki összesített "soron lévő" ideje. Az óra alapból áll, a Start gomb indítja.
+// A határokat a játék saját időbélyege adja (az utolsó lépés ideje), így akkor is pontos, ha a figyelő későn veszi észre a lépést.
+// Hosszú tétlenséget (éjszaka) nem számolunk tovább a korlátnál.
 const CLOCK_CAP = 30 * 60_000;
 function advanceClock(c, acting, ts) {
-  if (!c || typeof c !== "object") c = { ms: {}, since: ts, acting: [] };
-  if (ts > c.since) {
+  if (!c || typeof c !== "object") c = { ms: {}, since: Date.now(), acting: [], running: false };
+  if (!c.ms) c.ms = {};
+  if (c.running && ts > c.since) {
     const gap = Math.min(ts - c.since, CLOCK_CAP);
     for (const n of c.acting || []) c.ms[n] = (c.ms[n] || 0) + gap;
     c.since = ts;
@@ -59,7 +61,17 @@ function advanceClock(c, acting, ts) {
   c.acting = [...acting];
   return c;
 }
-
+function controlClock(c, action, now) {
+  if (!c || typeof c !== "object") c = { ms: {}, since: now, acting: [], running: false };
+  if (!c.ms) c.ms = {};
+  if (action === "start" && !c.running) { c.running = true; c.since = now; }
+  else if (action === "pause" && c.running) {
+    const gap = Math.min(Math.max(now - c.since, 0), CLOCK_CAP);
+    for (const n of c.acting || []) c.ms[n] = (c.ms[n] || 0) + gap;
+    c.running = false; c.since = now;
+  } else if (action === "reset") { c.ms = {}; c.since = now; }
+  return c;
+}
 function parseGameId(input) {
   const s = String(input ?? "").trim();
   let m = /18xx\.games\/game\/(\d{1,9})/i.exec(s) || /^\s*#?(\d{1,9})\s*$/.exec(s);
@@ -136,6 +148,7 @@ export class Hub {
       if (req.method === "GET" && p === "/api/games") return this.listGames();
       if (req.method === "POST" && p === "/api/track") return await this.track(req);
       if (req.method === "POST" && p === "/api/ingest") return await this.ingest(req);
+      if (req.method === "POST" && p === "/api/clock") return await this.clockCtl(req);
       let m = /^\/api\/game\/(\d{1,9})\/view$/.exec(p);
       if (req.method === "GET" && m) return await this.getView(m[1]);
       m = /^\/api\/game\/(\d{1,9})$/.exec(p);
@@ -408,6 +421,25 @@ export class Hub {
     if (Number.isFinite(t)) await this.ctx.storage.setAlarm(Math.max(t, now + 1000));
   }
 
+  // ---------- játékidő-óra gombjai (Start / Szünet / Nullázás) ----------
+  async clockCtl(req) {
+    let body = {};
+    try { body = await req.json(); } catch {}
+    const id = String(body.id ?? "");
+    const g = this.games[id];
+    if (!g) return json({ error: "ismeretlen játék" }, 404);
+    if (!["start", "pause", "reset"].includes(body.action)) return json({ error: "ismeretlen művelet" }, 400);
+    g.clock = controlClock(g.clock, body.action, Date.now());
+    const raw = await this.ctx.storage.get("s:" + id);
+    if (raw) {
+      const d = JSON.parse(raw);
+      d.clock = g.clock;
+      await this.ctx.storage.put("s:" + id, JSON.stringify(d));
+      this.broadcast(id, { type: "snapshot", data: d });
+    }
+    await this.save();
+    return json({ ok: true, clock: g.clock });
+  }
   // ---------- a kiolvasó (GitHub Actions) ide küldi az eredményt ----------
   async ingest(req) {
     const auth = req.headers.get("authorization") || "";
