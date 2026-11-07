@@ -50,7 +50,7 @@ async function post(body) {
   if (!r.ok) throw new Error(`Küldési hiba: ${r.status}`);
 }
 
-async function scrapeOne(browser, id) {
+async function scrapeOne(getBrowser, id) {
   // 1) játék adatai a nyilvános API-ból (gyors) – ha nem változott a lépésszám, nem kell újra kiolvasni
   const res = await fetch(`https://18xx.games/api/game/${id}`, { headers: { accept: "application/json", "user-agent": "xx18-dashboard/1.0 (+https://github.com/gkwebek-git/18xx-dashboard)" } });
   if (!res.ok) throw new Error(`API hiba: ${res.status}`);
@@ -63,7 +63,7 @@ async function scrapeOne(browser, id) {
   }
 
   // 2) a Spreadsheet fül kiolvasása
-  const page = await browser.newPage();
+  const page = await (await getBrowser()).newPage();
   try {
     await page.setViewport({ width: 1400, height: 900 });
     await page.goto(`https://18xx.games/game/${id}#spreadsheet`, { waitUntil: "domcontentloaded", timeout: 90000 });
@@ -150,12 +150,13 @@ async function scrapeOne(browser, id) {
 }
 
 async function runAll() {
-  const browser = await puppeteer.launch({ executablePath, headless: "new", args: ["--no-sandbox", "--disable-gpu"] });
+  let browser = null; // csak akkor indítunk böngészőt, ha tényleg van mit kiolvasni
+  const getBrowser = async () => (browser ??= await puppeteer.launch({ executablePath, headless: "new", args: ["--no-sandbox", "--disable-gpu"] }));
   let failed = false;
   try {
     for (const id of ids) {
       try {
-        await scrapeOne(browser, id);
+        await scrapeOne(getBrowser, id);
       } catch (e) {
         failed = true;
         console.error(`[${id}] hiba:`, e.message);
@@ -163,7 +164,7 @@ async function runAll() {
       }
     }
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
   }
   return !failed;
 }
