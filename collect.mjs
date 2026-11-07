@@ -3,7 +3,7 @@ import { extractView } from "./extract-view.mjs";
 
 export async function collect(page, id, g) {
   const actionCount = Array.isArray(g.actions) ? g.actions.length : 0;
-  await page.evaluate(() => { const a = [...document.querySelectorAll("#game_menu a")].find((e) => e.textContent.trim() === "Spreadsheet"); if (a) a.click(); });
+  await page.evaluate(() => { if (document.getElementById("player_details")) return; const a = [...document.querySelectorAll("#game_menu a")].find((e) => e.textContent.trim() === "Spreadsheet"); if (a) a.click(); });
   await page.waitForSelector("#player_details", { timeout: 60000 });
   await new Promise((r) => setTimeout(r, 400));
     const sheet = await page.evaluate(() => {
