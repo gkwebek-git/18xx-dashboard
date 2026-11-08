@@ -105,7 +105,7 @@
   .co .r3 b { color: var(--txt); font-weight: 600; }
   .co .r3 em { font-style: normal; color: var(--acc); font-weight: 700; }
 
-  #bottom { display: grid; grid-template-columns: .72fr 1.28fr; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; }
+  #bottom { display: grid; grid-template-columns: .72fr 1.28fr; grid-template-rows: minmax(min-content, 1.25fr) minmax(min-content, 1fr); gap: 12px; min-height: 0; }
   #trainBox { grid-column: 1; grid-row: 1; } #chartBox { grid-column: 2; grid-row: 1; } #bankBox { grid-column: 1; grid-row: 2; } #clockBox { grid-column: 2; grid-row: 2; }
   #chartBox .cv canvas { position: absolute; left: 0; top: 0; }
   #clockBox { padding: 7px 12px 5px; display: flex; flex-direction: column; min-height: 0; }
@@ -229,19 +229,27 @@
 
   // ---------- 1920×1080-as vászon, bármekkora monitorra illesztve ----------
   const stage = $("stage");
-  let MAINH = 850, mapAspect = 0;
+  let MAINH = 850, mapAspect = 0, SCALE = 1;
   function applyMapW() { if (mapAspect) stage.style.setProperty("--mapw", Math.min(Math.round(MAINH * mapAspect) + 4, Math.max(stage.offsetWidth - 600, 700)) + "px"); }
   function fit() {
-    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
-    const W = Math.round(innerWidth / s), H = Math.round(innerHeight / s); // a vászon kitölti a teljes képernyőt, bármilyen az arány
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080); SCALE = s;
+    const W = Math.round(innerWidth / s), H = Math.min(Math.round(innerHeight / s), 1536); // 5:4-nél magasabb képernyőn fent/lent sáv marad // a vászon kitölti a teljes képernyőt, bármilyen az arány
     stage.style.width = W + "px"; stage.style.height = H + "px";
     MAINH = H - 258; applyMapW();
     stage.style.transform = `translate(-50%, -50%) scale(${s})`;
   }
-  addEventListener("resize", () => { fit(); setTimeout(() => { try { chart && chart.resize(); } catch {} }, 100); }); fit();
+  addEventListener("resize", () => { fit(); setTimeout(() => { try { sizeChart(); } catch {} }, 60); }); fit();
 
   if (!game) { location.replace("./"); return; }
 
+  // A Chart.js a CSS-skálázott vásznon rosszul mérne, ezért a méretet mi adjuk: a doboz saját (skálázatlan) mérete
+  function sizeChart() {
+    if (!chart) return;
+    const p = chart.canvas.parentElement; const w = p.clientWidth, h = p.clientHeight;
+    if (w < 10 || h < 10) return;
+    chart.options.devicePixelRatio = Math.max((window.devicePixelRatio || 1) * SCALE, 1);
+    if (chart.width !== w || chart.height !== h) chart.resize(w, h);
+  }
   let snap = null, view = null, viewRev = 0, state = "connecting", chart = null;
 
   function showMsg(t) { $("msg").style.display = "flex"; $("msg").textContent = t; }
@@ -401,12 +409,14 @@
     Chart.defaults.animation.duration = 700;
     const datasets = ps.map((p, i) => ({ label: pname(p), data: h.map((x) => x.values[i] ?? null), borderColor: pcolor(p, i), backgroundColor: pcolor(p, i), spanGaps: true, pointRadius: 0, borderWidth: 2.5, tension: 0.3 }));
     if (!chart) {
+      const cvp = $("c2").parentElement;
+      $("c2").width = Math.max(cvp.clientWidth, 50); $("c2").height = Math.max(cvp.clientHeight, 50);
       chart = new Chart($("c2"), { type: "line", data: { labels: h.map((x) => x.label), datasets },
-        options: { interaction: { mode: "index", intersect: false },
+        options: { responsive: false, devicePixelRatio: Math.max((window.devicePixelRatio || 1) * SCALE, 1), interaction: { mode: "index", intersect: false },
           plugins: { legend: { position: "top", align: "end", labels: { color: "#e9eef5", boxWidth: 9, boxHeight: 9, padding: 10, usePointStyle: true, font: { size: 12 } } } },
           scales: { x: { ticks: { color: "#8a98ab", maxRotation: 0, autoSkip: true, maxTicksLimit: 9 }, grid: { display: false } }, y: { ticks: { color: "#8a98ab", callback: (v) => money(v) }, grid: { color: "rgba(138,152,171,.15)" }, beginAtZero: true } } } });
-      setTimeout(() => chart && chart.resize(), 150); setTimeout(() => chart && chart.resize(), 900);
-    } else { chart.data.labels = h.map((x) => x.label); chart.data.datasets = datasets; chart.resize(); chart.update(); }
+      if (window.ResizeObserver) new ResizeObserver(sizeChart).observe(cvp); setTimeout(sizeChart, 150);
+    } else { chart.data.labels = h.map((x) => x.label); chart.data.datasets = datasets; sizeChart(); chart.update(); }
   }
 
   // ---------- adatok kezelése ----------
