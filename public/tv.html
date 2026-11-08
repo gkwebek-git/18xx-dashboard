@@ -230,7 +230,7 @@
   // ---------- 1920×1080-as vászon, bármekkora monitorra illesztve ----------
   const stage = $("stage");
   let MAINH = 850, mapAspect = 0;
-  function applyMapW() { if (mapAspect) stage.style.setProperty("--mapw", Math.min(Math.round(MAINH * mapAspect) + 4, Math.round(stage.offsetWidth * 0.78)) + "px"); }
+  function applyMapW() { if (mapAspect) stage.style.setProperty("--mapw", Math.min(Math.round(MAINH * mapAspect) + 4, Math.max(stage.offsetWidth - 600, 700)) + "px"); }
   function fit() {
     const s = Math.min(innerWidth / 1920, innerHeight / 1080);
     const W = Math.round(innerWidth / s), H = Math.round(innerHeight / s); // a vászon kitölti a teljes képernyőt, bármilyen az arány
