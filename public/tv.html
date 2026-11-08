@@ -105,7 +105,7 @@
   .co .r3 b { color: var(--txt); font-weight: 600; }
   .co .r3 em { font-style: normal; color: var(--acc); font-weight: 700; }
 
-  #bottom { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; }
+  #bottom { display: grid; grid-template-columns: .72fr 1.28fr; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; }
   #trainBox { grid-column: 1; grid-row: 1; } #chartBox { grid-column: 2; grid-row: 1; } #bankBox { grid-column: 1; grid-row: 2; } #clockBox { grid-column: 2; grid-row: 2; }
   #chartBox .cv canvas { position: absolute; left: 0; top: 0; }
   #clockBox { padding: 7px 12px 5px; display: flex; flex-direction: column; min-height: 0; }
@@ -238,7 +238,7 @@
     MAINH = H - 258; applyMapW();
     stage.style.transform = `translate(-50%, -50%) scale(${s})`;
   }
-  addEventListener("resize", fit); fit();
+  addEventListener("resize", () => { fit(); setTimeout(() => { try { chart && chart.resize(); } catch {} }, 100); }); fit();
 
   if (!game) { location.replace("./"); return; }
 
@@ -405,7 +405,8 @@
         options: { interaction: { mode: "index", intersect: false },
           plugins: { legend: { position: "top", align: "end", labels: { color: "#e9eef5", boxWidth: 9, boxHeight: 9, padding: 10, usePointStyle: true, font: { size: 12 } } } },
           scales: { x: { ticks: { color: "#8a98ab", maxRotation: 0, autoSkip: true, maxTicksLimit: 9 }, grid: { display: false } }, y: { ticks: { color: "#8a98ab", callback: (v) => money(v) }, grid: { color: "rgba(138,152,171,.15)" }, beginAtZero: true } } } });
-    } else { chart.data.labels = h.map((x) => x.label); chart.data.datasets = datasets; chart.update(); }
+      setTimeout(() => chart && chart.resize(), 150); setTimeout(() => chart && chart.resize(), 900);
+    } else { chart.data.labels = h.map((x) => x.label); chart.data.datasets = datasets; chart.resize(); chart.update(); }
   }
 
   // ---------- adatok kezelése ----------
