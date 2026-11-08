@@ -51,25 +51,29 @@ export default {
 // Hosszú tétlenséget (éjszaka) nem számolunk tovább a korlátnál.
 const CLOCK_CAP = 30 * 60_000;
 function advanceClock(c, acting, ts) {
-  if (!c || typeof c !== "object") c = { ms: {}, since: Date.now(), acting: [], running: false };
+  if (!c || typeof c !== "object") c = { ms: {}, turn: {}, since: Date.now(), acting: [], running: false };
   if (!c.ms) c.ms = {};
+  if (!c.turn) c.turn = {};
   if (c.running && ts > c.since) {
     const gap = Math.min(ts - c.since, CLOCK_CAP);
-    for (const n of c.acting || []) c.ms[n] = (c.ms[n] || 0) + gap;
+    for (const n of c.acting || []) { c.ms[n] = (c.ms[n] || 0) + gap; c.turn[n] = (c.turn[n] || 0) + gap; }
     c.since = ts;
   }
+  // aki most került sorra, annak a köridője nulláról indul; aki lépett, annak a utolsó köridője megmarad
+  for (const n of acting) if (!(c.acting || []).includes(n)) c.turn[n] = 0;
   c.acting = [...acting];
   return c;
 }
 function controlClock(c, action, now) {
-  if (!c || typeof c !== "object") c = { ms: {}, since: now, acting: [], running: false };
+  if (!c || typeof c !== "object") c = { ms: {}, turn: {}, since: now, acting: [], running: false };
   if (!c.ms) c.ms = {};
+  if (!c.turn) c.turn = {};
   if (action === "start" && !c.running) { c.running = true; c.since = now; }
   else if (action === "pause" && c.running) {
     const gap = Math.min(Math.max(now - c.since, 0), CLOCK_CAP);
-    for (const n of c.acting || []) c.ms[n] = (c.ms[n] || 0) + gap;
+    for (const n of c.acting || []) { c.ms[n] = (c.ms[n] || 0) + gap; c.turn[n] = (c.turn[n] || 0) + gap; }
     c.running = false; c.since = now;
-  } else if (action === "reset") { c.ms = {}; c.since = now; }
+  } else if (action === "reset") { c.ms = {}; c.turn = {}; c.since = now; }
   return c;
 }
 function parseGameId(input) {
@@ -149,6 +153,7 @@ export class Hub {
       if (req.method === "POST" && p === "/api/track") return await this.track(req);
       if (req.method === "POST" && p === "/api/ingest") return await this.ingest(req);
       if (req.method === "POST" && p === "/api/clock") return await this.clockCtl(req);
+      if (req.method === "POST" && p === "/api/custom") return await this.customCtl(req);
       let m = /^\/api\/game\/(\d{1,9})\/view$/.exec(p);
       if (req.method === "GET" && m) return await this.getView(m[1]);
       m = /^\/api\/game\/(\d{1,9})$/.exec(p);
@@ -421,6 +426,30 @@ export class Hub {
     if (Number.isFinite(t)) await this.ctx.storage.setAlarm(Math.max(t, now + 1000));
   }
 
+  // ---------- játékos megjelenített neve / színe (mindenki ugyanazt látja) ----------
+  async customCtl(req) {
+    let body = {};
+    try { body = await req.json(); } catch {}
+    const id = String(body.id ?? "");
+    const g = this.games[id];
+    if (!g) return json({ error: "ismeretlen játék" }, 404);
+    const player = String(body.player ?? "").slice(0, 60);
+    if (!player || !(g.players || []).includes(player)) return json({ error: "ismeretlen játékos" }, 400);
+    const name = String(body.name ?? "").replace(/[<>]/g, "").trim().slice(0, 24);
+    const color = /^#[0-9a-fA-F]{6}$/.test(String(body.color ?? "")) ? String(body.color) : "";
+    g.custom = g.custom || {};
+    if (!name && !color) delete g.custom[player];
+    else g.custom[player] = { ...(name ? { name } : {}), ...(color ? { color } : {}) };
+    const raw = await this.ctx.storage.get("s:" + id);
+    if (raw) {
+      const d = JSON.parse(raw);
+      d.custom = g.custom;
+      await this.ctx.storage.put("s:" + id, JSON.stringify(d));
+      this.broadcast(id, { type: "snapshot", data: d });
+    }
+    await this.save();
+    return json({ ok: true, custom: g.custom });
+  }
   // ---------- játékidő-óra gombjai (Start / Szünet / Nullázás) ----------
   async clockCtl(req) {
     let body = {};
@@ -434,6 +463,7 @@ export class Hub {
     if (raw) {
       const d = JSON.parse(raw);
       d.clock = g.clock;
+      if (g.custom) d.custom = g.custom;
       await this.ctx.storage.put("s:" + id, JSON.stringify(d));
       this.broadcast(id, { type: "snapshot", data: d });
     }
@@ -478,6 +508,7 @@ export class Hub {
       const d = { ...body.data, fresh: now };
       g.clock = advanceClock(g.clock, Array.isArray(d.acting) ? d.acting : [], (d.updatedAt || 0) * 1000 || now);
       d.clock = g.clock;
+      if (g.custom) d.custom = g.custom;
       if (body.view && typeof body.view === "object") {
         d.vrev = now;
         await this.ctx.storage.put("v:" + id, JSON.stringify(body.view));

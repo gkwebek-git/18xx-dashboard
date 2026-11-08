@@ -28,6 +28,28 @@ if (!id) { console.error("Nem találok játékazonosítót a megadott szövegben
 const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".json": "application/json", ".css": "text/css", ".svg": "image/svg+xml" };
 const server = http.createServer((req, res) => {
   // játékidő-óra gombjai (Start / Szünet / Nullázás) – az óra állapota egy fájlban él
+  if (req.method === "POST" && new URL(req.url, "http://x").pathname === "/api/custom") {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      try {
+        const b = JSON.parse(body);
+        const cf = path.join(dataDir, `${id}.custom.json`);
+        let cu = {}; try { cu = JSON.parse(fs.readFileSync(cf, "utf8")); } catch {}
+        const player = String(b.player || "").slice(0, 60);
+        const name = String(b.name || "").replace(/[<>]/g, "").trim().slice(0, 24);
+        const color = /^#[0-9a-fA-F]{6}$/.test(String(b.color || "")) ? String(b.color) : "";
+        if (!player) throw new Error("ismeretlen játékos");
+        if (!name && !color) delete cu[player]; else cu[player] = { ...(name ? { name } : {}), ...(color ? { color } : {}) };
+        fs.mkdirSync(dataDir, { recursive: true });
+        fs.writeFileSync(cf, JSON.stringify(cu));
+        const sf = path.join(dataDir, `${id}.json`);
+        try { const s = JSON.parse(fs.readFileSync(sf, "utf8")); s.custom = cu; fs.writeFileSync(sf, JSON.stringify(s)); } catch {}
+        res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true, custom: cu }));
+      } catch (e) { res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ error: String(e.message) })); }
+    });
+    return;
+  }
   if (req.method === "POST" && new URL(req.url, "http://x").pathname === "/api/clock") {
     let body = "";
     req.on("data", (c) => (body += c));

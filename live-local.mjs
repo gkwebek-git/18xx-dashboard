@@ -84,6 +84,7 @@ async function refresh(reason) {
         let prevClock = null; try { prevClock = JSON.parse(fs.readFileSync(cf, "utf8")); } catch {}
         out.clock = advanceClock(prevClock, out.acting || [], (out.updatedAt || 0) * 1000 || Date.now());
         fs.writeFileSync(cf, JSON.stringify(out.clock));
+        try { out.custom = JSON.parse(fs.readFileSync(path.join(outDir, `${id}.custom.json`), "utf8")); } catch {}
         if (view) writeAtomic(`${id}.view.json`, view);
         writeAtomic(`${id}.json`, out);
       }

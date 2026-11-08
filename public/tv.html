@@ -106,7 +106,8 @@
   .co .r3 em { font-style: normal; color: var(--acc); font-weight: 700; }
 
   #bottom { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; }
-  #trainBox { grid-column: 1; grid-row: 1; } #bankBox { grid-column: 2; grid-row: 1; } #chartBox { grid-column: 1; grid-row: 2; } #clockBox { grid-column: 2; grid-row: 2; }
+  #trainBox { grid-column: 1; grid-row: 1; } #chartBox { grid-column: 2; grid-row: 1; } #bankBox { grid-column: 1; grid-row: 2; } #clockBox { grid-column: 2; grid-row: 2; }
+  #chartBox .cv canvas { position: absolute; left: 0; top: 0; }
   #clockBox { padding: 7px 12px 5px; display: flex; flex-direction: column; min-height: 0; }
   #clockBox h2 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 3px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
   #clock { flex: 1; display: flex; flex-direction: column; justify-content: space-around; min-height: 0; }
@@ -115,7 +116,31 @@
   .cbtn button:hover { border-color: var(--acc); }
   .cbtn button.go { background: rgba(63, 185, 80, .18); border-color: rgba(63, 185, 80, .6); }
   .cbtn button.stop { background: rgba(242, 180, 90, .16); border-color: rgba(242, 180, 90, .6); color: var(--acc); }
-  .ck.tot { border-top: 1px solid var(--line); border-radius: 0; margin-top: 1px; padding-top: 2px; }
+  .pl .pt { display: flex; gap: 6px; margin-left: auto; padding: 0; background: none; border: 0; }
+  .pl .pt em { font-style: normal; font-size: 13px; font-weight: 600; color: var(--mut); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0 6px; white-space: nowrap; }
+  .pl .pt em b { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--txt); }
+  .pl .pt.run .tn { color: var(--acc); border-color: rgba(242, 180, 90, .6); background: rgba(242, 180, 90, .1); }
+  .pl .pt.run .tn b { color: var(--acc); }
+  .pl .pt.run { background: none; border: 0; color: inherit; }
+  .pl .nm .ed { cursor: pointer; }
+  .pl .nm .ed:hover { text-decoration: underline dotted; }
+  .ck em { font-style: normal; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--mut); min-width: 44px; text-align: right; }
+  .ck.run em { color: var(--acc); }
+  .ck b { min-width: 66px; text-align: right; }
+  #clockBox h2 small { text-transform: none; letter-spacing: 0; font-weight: 500; opacity: .7; margin-left: 4px; }
+  #edit { display: none; position: absolute; inset: 0; z-index: 50; background: rgba(5, 8, 12, .72); align-items: center; justify-content: center; }
+  #edit.on { display: flex; }
+  #edit .ebox { width: 440px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+  #edit h3 { margin: 0; font-size: 20px; }
+  #edit label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--mut); }
+  #edit input#edName { font: inherit; font-size: 20px; color: var(--txt); background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+  #edit .sw { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #edit .sw button { width: 34px; height: 34px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+  #edit .sw button.sel { border-color: #fff; }
+  #edit .sw input { width: 40px; height: 36px; border: 0; background: none; padding: 0; cursor: pointer; }
+  #edit .btns { display: flex; gap: 10px; justify-content: flex-end; }
+  #edit .btns button { font: inherit; font-size: 15px; font-weight: 700; color: var(--txt); background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 16px; cursor: pointer; }
+  #edit .btns button.go { background: rgba(63, 185, 80, .2); border-color: rgba(63, 185, 80, .6); }  .ck.tot { border-top: 1px solid var(--line); border-radius: 0; margin-top: 1px; padding-top: 2px; }
   .ck.tot i { background: none; }
   .ck.tot span { color: var(--mut); text-transform: uppercase; font-size: 12px; letter-spacing: .08em; }
   .ck.tot b { color: var(--acc); }
@@ -173,7 +198,7 @@
     <div id="bottom">
       <div class="panel" id="chartBox"><h2>Vagyon alakulása a körök során</h2><div class="cv"><canvas id="c2"></canvas></div></div>
       <div class="panel" id="trainBox"><h2>Vonatok</h2><div id="trains"></div></div>
-      <div class="panel" id="clockBox"><h2><span>Játékidő</span><span class="cbtn"><button id="ckGo" type="button"></button><button id="ckReset" type="button" title="Nullázás">↺</button></span></h2><div id="clock"></div></div>
+      <div class="panel" id="clockBox"><h2><span>Játékidő <small>kör · össz</small></span><span class="cbtn"><button id="ckGo" type="button"></button><button id="ckReset" type="button" title="Nullázás">↺</button></span></h2><div id="clock"></div></div>
       <div class="panel" id="bankBox"><h2>Bank és hitelek</h2><div id="intr"></div></div>
     </div>
   </aside>
@@ -182,6 +207,7 @@
     <div class="bank" id="bank"></div>
     <div id="marketBox"></div>
   </section>
+  <div id="edit"></div>
   <div id="msg"></div>
 </div>
 
@@ -194,6 +220,9 @@
   const LOCAL = q.get("local") === "1";
   if (q.get("bg") === "transparent") document.body.classList.add("transparent");
   const PALETTE = ["#ff7b72", "#58a6ff", "#3fb950", "#d29922", "#bc8cff", "#39c5cf"];
+  // játékos-testreszabás (név, szín): az eredeti játékos-névhez kötve, mindenki ugyanazt látja
+  const pname = (p) => ((snap && snap.custom && snap.custom[p.name]) || {}).name || p.name;
+  const pcolor = (p, i) => ((snap && snap.custom && snap.custom[p.name]) || {}).color || PALETTE[i % PALETTE.length];
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const money = (n) => "$" + Math.round(n).toLocaleString("hu-HU").replace(/\u00a0/g, " ");
@@ -261,12 +290,12 @@
     const vp = (view && view.players) || [];
     $("players").style.setProperty("--n", ps.length);
     $("players").innerHTML = ps.map((p, i) => {
-      const pc = PALETTE[i % PALETTE.length];
+      const pc = pcolor(p, i);
       const v = vp.find((x) => x.name === p.name);
       const hold = (v ? v.holdings : []).map((h) => `<i title="${esc(h.sym.replace("*", ""))}"><img src="${logoUrl(h.logo)}" alt="">${esc(h.pct.replace("%", ""))}</i>`).join("");
       return `<div class="pl ${acting.has(p.name) ? "act" : ""}" style="--pc:${pc}">
         ${acting.has(p.name) ? '<span class="turn">LÉP</span>' : ""}${v && v.priority ? '<span class="pd">Priority</span>' : ""}
-        <div class="c1"><div class="nm"><span>${esc(p.name)}</span><span class="rk">#${rank.get(i)}</span><span class="pt" data-p="${esc(p.name)}">⏱ <b>0:00:00</b></span></div><div class="hold">${hold}</div></div>
+        <div class="c1"><div class="nm"><span class="ed" data-edit="${esc(p.name)}" title="Kattints: név és szín szerkesztése">${esc(pname(p))}</span><span class="rk">#${rank.get(i)}</span><span class="pt" data-p="${esc(p.name)}"><em class="tn" title="Köridő">⏱ <b>0:00</b></em><em class="tt" title="Összidő">Σ <b>0:00:00</b></em></span></div><div class="hold">${hold}</div></div>
         <div class="cash"><small>Készpénz</small><b>${money(p.cash)}</b></div>
         <div class="st"><span>Érték</span><b>${money(p.value)}</b><span>Likv.</span><b>${money(p.liquidity)}</b><span>Részvény</span><b>${p.shares}</b><span>Cert</span><b>${p.certs}/${snap.certLimit || "?"}</b></div>
       </div>`;    }).join("");
@@ -370,7 +399,7 @@
     Chart.defaults.font.size = 11;
     Chart.defaults.maintainAspectRatio = false;
     Chart.defaults.animation.duration = 700;
-    const datasets = ps.map((p, i) => ({ label: p.name, data: h.map((x) => x.values[i] ?? null), borderColor: PALETTE[i % PALETTE.length], backgroundColor: PALETTE[i % PALETTE.length], spanGaps: true, pointRadius: 0, borderWidth: 2.5, tension: 0.3 }));
+    const datasets = ps.map((p, i) => ({ label: pname(p), data: h.map((x) => x.values[i] ?? null), borderColor: pcolor(p, i), backgroundColor: pcolor(p, i), spanGaps: true, pointRadius: 0, borderWidth: 2.5, tension: 0.3 }));
     if (!chart) {
       chart = new Chart($("c2"), { type: "line", data: { labels: h.map((x) => x.label), datasets },
         options: { interaction: { mode: "index", intersect: false },
@@ -392,38 +421,76 @@
   // ---------- játékidő-óra ----------
   const CLOCK_CAP = 30 * 60_000;
   const fmtT = (ms) => { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return `${h}:${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}`; };
+  const fmtTurn = (ms) => (ms >= 3600000 ? fmtT(ms) : `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`);
   function renderClock() {
     const el = $("clock");
     if (!snap) return;
-    const c = snap.clock || { ms: {}, since: Date.now(), acting: [], running: false };
+    const c = snap.clock || { ms: {}, turn: {}, since: Date.now(), acting: [], running: false };
     const running = !!c.running;
     const run = running ? Math.min(Math.max(Date.now() - c.since, 0), CLOCK_CAP) : 0;
     const go = $("ckGo");
     go.textContent = running ? "⏸ Szünet" : "▶ Start";
     go.className = running ? "stop" : "go";
-    const key = (snap.players || []).map((p) => p.name + ((c.acting || []).includes(p.name) ? "*" : "")).join("|") + running;
+    const ps = snap.players || [];
+    const key = ps.map((p, i) => pname(p) + pcolor(p, i) + ((c.acting || []).includes(p.name) ? "*" : "")).join("|") + running;
     if (el.dataset.k !== key) {
       el.dataset.k = key;
-      el.innerHTML = (snap.players || []).map((p, i) => {
+      el.innerHTML = ps.map((p, i) => {
         const on = (c.acting || []).includes(p.name);
-        return `<div class="ck ${on ? "run" : ""} ${running ? "" : "off"}" style="--pc:${PALETTE[i % PALETTE.length]}"><i></i><span>${esc(p.name)}</span><b></b></div>`;
-      }).join("") + `<div class="ck tot"><i></i><span>Összidő</span><b></b></div>`;
+        return `<div class="ck ${on ? "run" : ""} ${running ? "" : "off"}" style="--pc:${pcolor(p, i)}"><i></i><span>${esc(pname(p))}</span><em></em><b></b></div>`;
+      }).join("") + `<div class="ck tot"><i></i><span>Összidő</span><em></em><b></b></div>`;
     }
+    const val = (n) => {
+      const on = (c.acting || []).includes(n);
+      return { tot: (c.ms && c.ms[n] || 0) + (on ? run : 0), turn: ((c.turn && c.turn[n]) || 0) + (on ? run : 0), on };
+    };
     let sum = 0;
-    [...el.querySelectorAll(".ck:not(.tot) b")].forEach((b, i) => {
-      const p = snap.players[i];
-      const v = (c.ms && c.ms[p.name] || 0) + ((c.acting || []).includes(p.name) ? run : 0);
-      sum += v;
-      b.textContent = fmtT(v);
+    [...el.querySelectorAll(".ck:not(.tot)")].forEach((row, i) => {
+      const v = val(ps[i].name);
+      sum += v.tot;
+      row.querySelector("em").textContent = fmtTurn(v.turn);
+      row.querySelector("b").textContent = fmtT(v.tot);
     });
     const tb = el.querySelector(".ck.tot b"); if (tb) tb.textContent = fmtT(sum);
     // ugyanez a játékosok kártyáin
     document.querySelectorAll("#players .pt").forEach((x) => {
-      const n = x.dataset.p, on = running && (c.acting || []).includes(n);
-      x.querySelector("b").textContent = fmtT((c.ms && c.ms[n] || 0) + (on ? run : 0));
+      const n = x.dataset.p, v = val(n), on = running && v.on;
+      x.querySelector(".tn b").textContent = fmtTurn(v.turn);
+      x.querySelector(".tt b").textContent = fmtT(v.tot);
       x.classList.toggle("run", on);
     });
+  }  // ---------- játékos neve / színe ----------
+  const SWATCH = ["#ff7b72", "#f0883e", "#d29922", "#e3b341", "#3fb950", "#39c5cf", "#58a6ff", "#bc8cff", "#f778ba", "#e9eef5"];
+  function openEditor(orig) {
+    const i = (snap.players || []).findIndex((p) => p.name === orig);
+    if (i < 0) return;
+    const p = snap.players[i];
+    let color = pcolor(p, i);
+    const box = $("edit");
+    box.innerHTML = `<div class="ebox"><h3>Játékos: ${esc(orig)}</h3>
+      <label>Megjelenített név<input id="edName" maxlength="24" value="${esc(pname(p))}"></label>
+      <div class="sw">${SWATCH.map((c) => `<button type="button" data-c="${c}" style="background:${c}"></button>`).join("")}<input id="edColor" type="color" value="${color}"></div>
+      <div class="btns"><button id="edSave" class="go" type="button">Mentés</button><button id="edReset" type="button">Alaphelyzet</button><button id="edCancel" type="button">Mégse</button></div></div>`;
+    box.classList.add("on");
+    const mark = () => box.querySelectorAll(".sw button").forEach((b) => b.classList.toggle("sel", b.dataset.c === color));
+    mark();
+    box.querySelectorAll(".sw button").forEach((b) => b.addEventListener("click", () => { color = b.dataset.c; $("edColor").value = color; mark(); }));
+    $("edColor").addEventListener("input", (e) => { color = e.target.value; mark(); });
+    const close = () => box.classList.remove("on");
+    $("edCancel").addEventListener("click", close);
+    box.addEventListener("click", (e) => { if (e.target === box) close(); }, { once: true });
+    $("edSave").addEventListener("click", async () => { await customCtl(orig, $("edName").value.trim(), color); close(); });
+    $("edReset").addEventListener("click", async () => { await customCtl(orig, "", ""); close(); });
+    $("edName").focus(); $("edName").select();
   }
+  async function customCtl(player, name, color) {
+    try {
+      const r = await fetch(LOCAL ? "api/custom" : `${HUB}/api/custom`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: game, player, name, color }) });
+      const j = await r.json();
+      if (j.custom && snap) { snap.custom = j.custom; renderPlayers(); renderChart(); renderClock(); }
+    } catch {}
+  }
+  $("players").addEventListener("click", (e) => { const t = e.target.closest("[data-edit]"); if (t && snap) openEditor(t.dataset.edit); });
   async function clockCtl(action) {
     try {
       const r = await fetch(LOCAL ? "api/clock" : `${HUB}/api/clock`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: game, action }) });
