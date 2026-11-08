@@ -49,7 +49,7 @@ export default {
 // Játékidő-óra: mindenki összesített "soron lévő" ideje. Az óra alapból áll, a Start gomb indítja.
 // A határokat a játék saját időbélyege adja (az utolsó lépés ideje), így akkor is pontos, ha a figyelő későn veszi észre a lépést.
 // Hosszú tétlenséget (éjszaka) nem számolunk tovább a korlátnál.
-const CLOCK_CAP = 30 * 60_000;
+const CLOCK_CAP = Infinity; // nincs korlát: lokálisan játszanak, senki nem "tűnik el"
 function advanceClock(c, acting, ts) {
   if (!c || typeof c !== "object") c = { ms: {}, turn: {}, since: Date.now(), acting: [], running: false };
   if (!c.ms) c.ms = {};

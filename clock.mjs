@@ -1,7 +1,7 @@
 // Játékidő-óra (a worker/src/index.js-ben lévő ugyanilyen függvények párja).
 // Az óra alapból áll; a "Start" gomb indítja. Futás közben a soron lévő játékos ideje gyűlik:
 //   ms   = összidő, turn = köridő (újra sorra kerüléskor nulláról indul, lépés után megmarad az utolsó köridő).
-export const CLOCK_CAP = 30 * 60_000;
+export const CLOCK_CAP = Infinity; // nincs korlát: lokálisan játszanak, senki nem "tűnik el"
 
 export function newClock() {
   return { ms: {}, turn: {}, since: Date.now(), acting: [], running: false };

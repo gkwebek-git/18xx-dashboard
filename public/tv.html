@@ -420,7 +420,7 @@
     } catch {}
   }
   // ---------- játékidő-óra ----------
-  const CLOCK_CAP = 30 * 60_000;
+  const CLOCK_CAP = Infinity; // nincs korlát: lokálisan játszanak, senki nem "tűnik el"
   const fmtT = (ms) => { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return `${h}:${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}`; };
   const fmtTurn = (ms) => (ms >= 3600000 ? fmtT(ms) : `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`);
   function renderClock() {
